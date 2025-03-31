@@ -15,6 +15,10 @@ export class AuthService {
   }
 
   generateToken(payload: any): string {
-    return this.jwtService.sign(payload);
+    const tokenPayload = { ...payload, id: payload.sub };
+    delete tokenPayload.sub;
+    const token = this.jwtService.sign(tokenPayload);
+    console.log('Generated JWT:', token, 'Payload:', tokenPayload);
+    return token;
   }
 }

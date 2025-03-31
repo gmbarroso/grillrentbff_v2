@@ -13,7 +13,16 @@ export class UserController {
 
   @Post('register')
   async register(@Body(new JoiValidationPipe(CreateUserSchema)) createUserDto: CreateUserDto) {
-    this.logger.log(`Registering apartment: ${createUserDto.apartment}, block: ${createUserDto.block}`);
+    this.logger.log(`Registering user: ${createUserDto.apartment}, block: ${createUserDto.block}`);
+    const userExists = await this.userService.findUserByApartmentAndBlock(
+      createUserDto.apartment,
+      createUserDto.block,
+    );
+    if (userExists) {
+      this.logger.error(`User already exists: ${createUserDto.apartment}, block: ${createUserDto.block}`);
+      throw new UnauthorizedException('User already exists');
+    }
+    this.logger.log(`User registered successfully: ${createUserDto.apartment}, block: ${createUserDto.block}`);
     return this.userService.register(createUserDto);
   }
 
@@ -26,26 +35,28 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Req() req: any) {
-    const userId = req.user?.id;
+    const token = req.headers.authorization?.split(' ')[1];
 
-    if (!userId) {
-      throw new UnauthorizedException('User ID is missing');
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
     }
 
-    this.logger.log(`Fetching profile for user ID: ${userId}`);
-    return this.userService.getProfile(userId);
+    this.logger.log(`Redirecting to API for user profile`);
+    return this.userService.getProfile(token);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(@Req() req: any, @Body() updateData: Partial<CreateUserDto>) {
     const userId = req.user?.id;
+    const token = req.headers.authorization?.split(' ')[1];
 
     if (!userId) {
       throw new UnauthorizedException('User ID is missing');
     }
 
-    this.logger.log(`Updating profile for user ID: ${userId}`);
-    return this.userService.updateProfile(userId, updateData);
+    this.logger.log(`Redirecting to API to update profile for user ID: ${userId}`);
+    return this.userService.updateProfile(userId, updateData, token);
   }
 }
