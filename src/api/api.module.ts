@@ -11,6 +11,8 @@ import { ResourceController } from './controllers/resource.controller';
 import { ResourceService } from './services/resource.service';
 import { NoticeController } from './controllers/notice.controller';
 import { NoticeService } from './services/notice.service';
+import { BookingController } from './controllers/booking.controller';
+import { BookingService } from './services/booking.service';
 
 @Module({
   imports: [
@@ -22,8 +24,8 @@ import { NoticeService } from './services/notice.service';
       signOptions: { expiresIn: '60m' },
     }),
   ],
-  controllers: [UserController, ResourceController, NoticeController],
-  providers: [UserService, AuthService, ResourceService, NoticeService],
+  controllers: [UserController, ResourceController, NoticeController, BookingController],
+  providers: [UserService, AuthService, ResourceService, NoticeService, BookingService],
   exports: [UserService, JwtModule],
 })
 export class UserModule {}
