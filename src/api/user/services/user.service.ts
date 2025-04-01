@@ -5,7 +5,9 @@ import { AuthService } from '../../../shared/auth/services/auth.service';
 import { HttpServiceWrapper } from '../../../shared/http/http.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
+import { RevokedToken } from '../entities/revoked-token.entity';
 
 @Injectable()
 export class UserService {
@@ -14,6 +16,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(RevokedToken)
+    private readonly revokedTokenRepository: Repository<RevokedToken>,
     private readonly authService: AuthService,
     private readonly httpService: HttpServiceWrapper,
   ) {}
@@ -61,11 +65,11 @@ export class UserService {
     const isPasswordValid = await this.authService.comparePasswords(loginUserDto.password, user.password);
 
     if (!isPasswordValid) {
-      this.logger.warn(`Invalid password for user in apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}}`);
+      this.logger.warn(`Invalid password for user in apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { name: user.name, sub: user.id, role: user.role };
+    const payload = { name: user.name, id: user.id, role: user.role };
     const token = this.authService.generateToken(payload);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
@@ -73,12 +77,51 @@ export class UserService {
   }
 
   async getProfile(token: string) {
-    this.logger.log(`Redirecting GET profile request to API`);
+    this.logger.log('Entering UserService.getProfile');
+
+    this.logger.log('Redirecting GET profile request to API');
     return this.httpService.get('users/profile', undefined, token);
   }
 
-  async updateProfile(userId: string, updateData: Partial<CreateUserDto>, token: string) {
-    this.logger.log(`Redirecting PUT profile update request for user ID: ${userId}`);
-    return this.httpService.put(`users/${userId}`, updateData, token);
+  async getAllUsers(token: string) {
+    this.logger.log('Entering UserService.getAllUsers');
+    this.logger.log(`Token received: ${token}`);
+
+    this.logger.log('Redirecting GET all users request to API');
+    return this.httpService.get('users', undefined, token);
+  }
+
+  async updateProfile(updateData: UpdateUserDto, token: string) {
+    this.logger.log('Entering UserService.updateProfile');
+    this.logger.log(`Data received: ${JSON.stringify(updateData)}`);
+    this.logger.log('Redirecting PUT profile update request to API');
+
+    return this.httpService.put('users/profile', updateData, token);
+  }
+
+  async logout(token: string) {
+    this.logger.log('Entering UserService.logout');
+    this.logger.log(`Token to revoke: ${token}`);
+    const decoded = this.authService.decodeToken(token);
+    if (!decoded || !decoded.exp) {
+      this.logger.error('Invalid token: Unable to extract expiration date');
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const expirationDate = new Date(decoded.exp * 1000);
+
+    const revokedToken = this.revokedTokenRepository.create({ token, expirationDate });
+    await this.revokedTokenRepository.save(revokedToken);
+
+    this.logger.log('Token invalidated successfully');
+    return { message: 'User logged out successfully' };
+  }
+
+  async deleteUser(userId: string, token: string) {
+    this.logger.log('Entering UserService.deleteUser');
+    this.logger.log(`User ID to delete: ${userId}`);
+    this.logger.log('Redirecting DELETE user request to API');
+
+    return this.httpService.delete(`users/${userId}`, token);
   }
 }

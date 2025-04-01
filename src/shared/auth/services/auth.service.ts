@@ -14,11 +14,23 @@ export class AuthService {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  generateToken(payload: any): string {
-    const tokenPayload = { ...payload, id: payload.sub };
-    delete tokenPayload.sub;
+  generateToken(payload: { name: string; id: string; role: string }): string {
+    const tokenPayload = {
+      name: payload.name,
+      sub: payload.id,
+      role: payload.role,
+    };
+
     const token = this.jwtService.sign(tokenPayload);
-    console.log('Generated JWT:', token, 'Payload:', tokenPayload);
     return token;
+  }
+
+  decodeToken(token: string): any {
+    try {
+      return this.jwtService.decode(token);
+    } catch (error) {
+      console.error('Error decoding token:', error.message);
+      return null;
+    }
   }
 }

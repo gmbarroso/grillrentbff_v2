@@ -4,8 +4,8 @@
   "description": "Backend for Frontend (BFF) for GrillRent application",
   "main": "dist/main.js",
   "scripts": {
-    "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start": "npm run build && node dist/main.js",
+    "start:dev": "npm run build && nest start --watch",
     "build": "nest build",
     "lint": "eslint '{src,test}/**/*.ts' --fix",
     "test": "jest",

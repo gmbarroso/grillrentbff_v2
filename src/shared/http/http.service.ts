@@ -25,6 +25,11 @@ export class HttpServiceWrapper {
   }
 
   async get<T>(endpoint: string, params?: any, token?: string): Promise<T> {
+    this.logger.log('Entering HttpServiceWrapper.get');
+    this.logger.log(`Endpoint: ${endpoint}`);
+    this.logger.log(`Params: ${JSON.stringify(params)}`);
+    this.logger.log(`Token: ${token}`);
+
     const url = `${this.apiUrl}/${endpoint}`;
     const headers = token ? this.getAuthHeaders(token) : {};
     this.logger.log(`GET Request to URL: ${url} with headers: ${JSON.stringify(headers)}`);
@@ -35,6 +40,7 @@ export class HttpServiceWrapper {
       }
       return response.data;
     } catch (error) {
+      this.logger.error(`Error in HttpServiceWrapper.get: ${error.message}`);
       this.handleHttpError(error);
     }
   }

@@ -6,10 +6,11 @@ import { UserController } from './controllers/user.controller';
 import { AuthService } from '../../shared/auth/services/auth.service';
 import { HttpServiceModule } from '../../shared/http/http.module';
 import { User } from './entities/user.entity';
+import { RevokedToken } from './entities/revoked-token.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RevokedToken]),
     HttpServiceModule,
     JwtModule.register({
       global: true,

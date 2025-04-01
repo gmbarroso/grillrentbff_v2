@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto, CreateUserSchema } from '../dto/create-user.dto';
 import { LoginUserDto, LoginUserSchema } from '../dto/login-user.dto';
+import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
 import { UserService } from '../services/user.service';
 import { JoiValidationPipe } from '../../../shared/pipes/joi-validation.pipe';
 import { JwtAuthGuard } from '../../../shared/auth/guards/jwt-auth.guard';
@@ -35,6 +36,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Req() req: any) {
+    this.logger.log('Entering UserController.getProfile');
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
@@ -42,21 +44,77 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
 
-    this.logger.log(`Redirecting to API for user profile`);
+    this.logger.log('Calling UserService to fetch user profile');
     return this.userService.getProfile(token);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Put('profile')
-  async updateProfile(@Req() req: any, @Body() updateData: Partial<CreateUserDto>) {
-    const userId = req.user?.id;
+  @Get()
+  async getAllUsers(@Req() req: any) {
+    this.logger.log('Entering UserController.getAllUsers');
+
     const token = req.headers.authorization?.split(' ')[1];
 
-    if (!userId) {
-      throw new UnauthorizedException('User ID is missing');
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
     }
 
-    this.logger.log(`Redirecting to API to update profile for user ID: ${userId}`);
-    return this.userService.updateProfile(userId, updateData, token);
+    this.logger.log('Calling UserService to fetch all users');
+    return this.userService.getAllUsers(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile')
+  async updateProfile(@Req() req: any, @Body(new JoiValidationPipe(UpdateUserSchema)) updateData: UpdateUserDto) {
+    this.logger.log('Entering UserController.updateProfile');
+
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    this.logger.log('Calling UserService to update user profile');
+    return this.userService.updateProfile(updateData, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req: any) {
+    this.logger.log('Entering UserController.logout');
+
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    this.logger.log('Calling UserService to handle logout');
+    return this.userService.logout(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async deleteUser(@Req() req: any, @Param('id') userId: string) {
+    this.logger.log('Entering UserController.deleteUser');
+
+    const token = req.headers.authorization?.split(' ')[1];
+    const userRole = req.user?.role;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    if (userRole !== 'admin') {
+      this.logger.error('Only admins can delete users');
+      throw new UnauthorizedException('You do not have permission to delete users');
+    }
+
+    this.logger.log(`Calling UserService to delete user with ID: ${userId}`);
+    return this.userService.deleteUser(userId, token);
   }
 }
