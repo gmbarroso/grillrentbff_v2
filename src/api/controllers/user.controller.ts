@@ -3,8 +3,8 @@ import { CreateUserDto, CreateUserSchema } from '../dto/create-user.dto';
 import { LoginUserDto, LoginUserSchema } from '../dto/login-user.dto';
 import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
 import { UserService } from '../services/user.service';
-import { JoiValidationPipe } from '../../../shared/pipes/joi-validation.pipe';
-import { JwtAuthGuard } from '../../../shared/auth/guards/jwt-auth.guard';
+import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
+import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
 
 @Controller('users')
 export class UserController {

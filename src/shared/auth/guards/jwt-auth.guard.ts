@@ -2,7 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logge
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RevokedToken } from '../../../api/user/entities/revoked-token.entity';
+import { RevokedToken } from '../../../api/entities/revoked-token.entity';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

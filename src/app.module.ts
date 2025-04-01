@@ -1,7 +1,7 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserModule } from './api/user/user.module';
+import { UserModule } from './api/api.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 
 @Module({

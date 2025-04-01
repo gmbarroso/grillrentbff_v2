@@ -1,8 +1,8 @@
 import { Injectable, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthService } from '../../../shared/auth/services/auth.service';
-import { HttpServiceWrapper } from '../../../shared/http/http.service';
+import { AuthService } from '../../shared/auth/services/auth.service';
+import { HttpServiceWrapper } from '../../shared/http/http.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';

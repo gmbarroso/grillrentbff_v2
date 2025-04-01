@@ -28,11 +28,10 @@ export class HttpServiceWrapper {
     this.logger.log('Entering HttpServiceWrapper.get');
     this.logger.log(`Endpoint: ${endpoint}`);
     this.logger.log(`Params: ${JSON.stringify(params)}`);
-    this.logger.log(`Token: ${token}`);
 
     const url = `${this.apiUrl}/${endpoint}`;
     const headers = token ? this.getAuthHeaders(token) : {};
-    this.logger.log(`GET Request to URL: ${url} with headers: ${JSON.stringify(headers)}`);
+    this.logger.log(`GET Request to URL: ${url}`);
     try {
       const response = await this.httpService.get<T>(url, { params, headers }).toPromise();
       if (!response) {
