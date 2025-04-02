@@ -10,16 +10,17 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
 
-  // Enable CORS
+  const allowedOrigins = configService.get<string>('CORS_ORIGINS')?.split(',') || [];
+
   app.enableCors({
-    origin: '*',
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
   });
 
   app.useGlobalPipes(new ValidationPipe());
-  const port = configService.get<number>('PORT') || 3001;
+  const port = configService.get<number>('PORT') || 2998;
   await app.listen(port);
   console.log(`BFF is listening on port ${port}`);
 }
