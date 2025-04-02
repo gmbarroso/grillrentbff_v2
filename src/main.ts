@@ -10,9 +10,11 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
 
+  // Enable CORS
   app.enableCors({
-    origin: configService.get<string>('FRONTEND_URL'),
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
   });
 
