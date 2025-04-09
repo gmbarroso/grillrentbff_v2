@@ -14,15 +14,12 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DATABASE_HOST'),
-        port: configService.get<number>('DATABASE_PORT'),
-        username: configService.get<string>('DATABASE_USER'),
-        password: configService.get<string>('DATABASE_PASSWORD'),
-        database: configService.get<string>('DATABASE_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Remover quando subir para prod
+        url: configService.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: true,
         ssl: {
-          rejectUnauthorized: false, // Permite conexões SSL sem certificado válido. Remover quando subir para prod
+          rejectUnauthorized: false,
         },
       }),
       inject: [ConfigService],
