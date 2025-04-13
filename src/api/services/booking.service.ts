@@ -11,7 +11,12 @@ export class BookingService {
   async createBooking(body: any, token: string) {
     this.logger.log('Calling createBooking');
     this.logger.debug(`Body: ${JSON.stringify(body)}`);
-    return this.httpService.post(this.apiUrl, body, token);
+    try {
+      return await this.httpService.post(this.apiUrl, body, token);
+    } catch (error) {
+      this.logger.error(`Error in createBooking: ${error.message}`);
+      throw error;
+    }
   }
 
   async getBookingsByUser(userId: string, token: string) {
