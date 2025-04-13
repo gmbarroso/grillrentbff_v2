@@ -40,7 +40,12 @@ export class BookingController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getAllBookings(@Query() query: any, @Req() req: any) {
+  async getAllBookings(
+    @Req() req: any,
+    @Query() query: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     this.logger.log('Received GET /bookings request');
     const token = req.headers.authorization?.split(' ')[1];
 
@@ -50,7 +55,7 @@ export class BookingController {
     }
 
     this.logger.log('Calling BookingService to fetch all bookings');
-    return this.bookingService.getAllBookings(query, token);
+    return this.bookingService.getAllBookings({ ...query, startDate, endDate }, token);
   }
 
   @UseGuards(JwtAuthGuard)
