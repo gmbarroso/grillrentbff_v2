@@ -1,16 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { HttpServiceWrapper } from '../../shared/http/http.service';
+import { WinstonLoggerService } from '../../shared/logger/winston-logger.service';
 
 @Injectable()
 export class BookingService {
-  private readonly logger = new Logger(BookingService.name);
+  private readonly logger = new WinstonLoggerService();
   private readonly apiUrl = 'bookings';
 
   constructor(private readonly httpService: HttpServiceWrapper) {}
 
   async createBooking(body: any, token: string) {
-    this.logger.log('Calling createBooking');
-    this.logger.debug(`Body: ${JSON.stringify(body)}`);
     try {
       return await this.httpService.post(this.apiUrl, body, token);
     } catch (error) {
@@ -20,30 +19,49 @@ export class BookingService {
   }
 
   async getBookingsByUser(userId: string, token: string) {
-    this.logger.log(`Calling getBookingsByUser for user ID: ${userId}`);
-    return this.httpService.get(`${this.apiUrl}/user/${userId}`, undefined, token);
+    try {
+      return await this.httpService.get(`${this.apiUrl}/user/${userId}`, undefined, token);
+    } catch (error) {
+      this.logger.error(`Error in getBookingsByUser: ${error.message}`);
+      throw error;
+    }
   }
 
   async getAllBookings(query: any, token: string) {
-    this.logger.log('Calling getAllBookings');
-    this.logger.debug(`Query: ${JSON.stringify(query)}`);
-    return this.httpService.get(this.apiUrl, query, token);
+    try {
+      return await this.httpService.get(this.apiUrl, query, token);
+    } catch (error) {
+      this.logger.error(`Error in getAllBookings: ${error.message}`);
+      throw error;
+    }
   }
 
   async deleteBooking(id: string, token: string) {
-    this.logger.log(`Calling deleteBooking with ID: ${id}`);
-    return this.httpService.delete(`${this.apiUrl}/${id}`, token);
+    try {
+      return await this.httpService.delete(`${this.apiUrl}/${id}`, token);
+    } catch (error) {
+      this.logger.error(`Error in deleteBooking: ${error.message}`);
+      throw error;
+    }
   }
 
   async checkAvailability(resourceId: string, startTime: string, endTime: string) {
-    this.logger.log(`Calling checkAvailability for resource ID: ${resourceId}`);
     const query = { startTime, endTime };
-    return this.httpService.get(`${this.apiUrl}/availability/${resourceId}`, query);
+    try {
+      return await this.httpService.get(`${this.apiUrl}/availability/${resourceId}`, query);
+    } catch (error) {
+      this.logger.error(`Error in checkAvailability: ${error.message}`);
+      throw error;
+    }
   }
 
   async getReservedTimes(resourceType: string, date: string, token: string) {
-    this.logger.log(`Calling getReservedTimes for resourceType: ${resourceType} on date: ${date}`);
     const query = { resourceType, date };
-    return this.httpService.get(`${this.apiUrl}/reserved-times`, query, token);
+    try {
+      return await this.httpService.get(`${this.apiUrl}/reserved-times`, query, token);
+    } catch (error) {
+      this.logger.error(`Error in getReservedTimes: ${error.message}`);
+      throw error;
+    }
   }
 }
