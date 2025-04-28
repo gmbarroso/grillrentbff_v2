@@ -17,7 +17,7 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
         url: configService.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
         synchronize: false,
-        logging: true,
+        logging: process.env.NODE_ENV !== 'production',
         ssl: {
           rejectUnauthorized: false,
         },

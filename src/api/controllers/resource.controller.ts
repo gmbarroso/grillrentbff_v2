@@ -50,7 +50,7 @@ export class ResourceController {
     }
 
     this.logger.log(`Calling ResourceService to fetch resource with ID: ${id}`);
-    return this.resourceService.getResource(id, token);
+    return this.resourceService.getResourceById(id, token);
   }
 
   @UseGuards(JwtAuthGuard)
