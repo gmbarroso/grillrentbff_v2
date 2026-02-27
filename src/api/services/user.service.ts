@@ -73,7 +73,7 @@ export class UserService {
     const token = this.authService.generateToken(payload);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
-    return { message: 'User logged in successfully', token };
+    return { message: 'User logged in successfully', token, access_token: token };
   }
 
   async getProfile(token: string) {
