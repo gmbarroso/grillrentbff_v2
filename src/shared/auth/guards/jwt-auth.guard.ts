@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { RevokedToken } from '../../../api/entities/revoked-token.entity';
 import { UserRole } from '../../../api/entities/user.entity';
 import { getAuthTokenFromCookieHeader, getCsrfTokenFromCookieHeader } from '../auth-cookie.util';
+import { SecurityObservabilityService } from '../../security/security-observability.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -15,6 +16,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     @InjectRepository(RevokedToken)
     private readonly revokedTokenRepository: Repository<RevokedToken>,
+    private readonly securityObservability: SecurityObservabilityService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -28,12 +30,14 @@ export class JwtAuthGuard implements CanActivate {
 
     if (!token) {
       this.logger.error('Token not provided');
+      this.securityObservability.recordAuthFailure('token_not_provided', request.url);
       throw new UnauthorizedException('Token not provided');
     }
 
     const isRevoked = await this.revokedTokenRepository.findOne({ where: { token } });
     if (isRevoked) {
       this.logger.error('Token has been revoked');
+      this.securityObservability.recordRevocationDenial(request.url);
       throw new UnauthorizedException('Token has been revoked');
     }
 
@@ -43,6 +47,7 @@ export class JwtAuthGuard implements CanActivate {
       const csrfFromCookie = getCsrfTokenFromCookieHeader(request.headers.cookie);
       if (!csrfFromHeader || !csrfFromCookie || csrfFromHeader !== csrfFromCookie) {
         this.logger.error('Invalid CSRF token');
+        this.securityObservability.recordCsrfRejection(request.url);
         throw new ForbiddenException('Invalid CSRF token');
       }
     }
@@ -53,6 +58,7 @@ export class JwtAuthGuard implements CanActivate {
       const isValidRole = decoded?.role === UserRole.ADMIN || decoded?.role === UserRole.RESIDENT;
       if (!decoded || !decoded.sub || !decoded.name || !decoded.exp || !isValidRole) {
         this.logger.error('Invalid token payload');
+        this.securityObservability.recordAuthFailure('invalid_token_payload', request.url);
         throw new UnauthorizedException('Invalid token payload');
       }
 
@@ -63,6 +69,7 @@ export class JwtAuthGuard implements CanActivate {
         throw error;
       }
       this.logger.error(`Token validation failed: ${error.message}`);
+      this.securityObservability.recordAuthFailure('invalid_or_expired_token', request.url);
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

@@ -67,6 +67,11 @@ describe('Phase 5 - BFF auth regression flow', () => {
       throw new Error('invalid token');
     }),
   };
+  const securityObservability = {
+    recordAuthFailure: jest.fn(),
+    recordCsrfRejection: jest.fn(),
+    recordRevocationDenial: jest.fn(),
+  };
 
   const createContext = (token: string) =>
     ({
@@ -92,7 +97,7 @@ describe('Phase 5 - BFF auth regression flow', () => {
       httpService as any,
     );
 
-    guard = new JwtAuthGuard(jwtService as any, revokedTokenRepository as any);
+    guard = new JwtAuthGuard(jwtService as any, revokedTokenRepository as any, securityObservability as any);
   });
 
   it('preserves login -> protected -> logout -> denied flow and token aliases', async () => {

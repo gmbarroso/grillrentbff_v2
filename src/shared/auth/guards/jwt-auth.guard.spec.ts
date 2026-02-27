@@ -11,6 +11,11 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   const revokedTokenRepository = {
     findOne: jest.fn(),
   };
+  const securityObservability = {
+    recordAuthFailure: jest.fn(),
+    recordCsrfRejection: jest.fn(),
+    recordRevocationDenial: jest.fn(),
+  };
 
   let guard: JwtAuthGuard;
 
@@ -41,7 +46,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    guard = new JwtAuthGuard(jwtService as any, revokedTokenRepository as any);
+    guard = new JwtAuthGuard(jwtService as any, revokedTokenRepository as any, securityObservability as any);
     jwtService.verify.mockReturnValue({
       sub: 'user-1',
       name: 'Test User',
@@ -64,7 +69,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   it.each(BFF_PROTECTED_PATHS)('denies mutation with missing csrf token on %s', async (path) => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
     await expect(guard.canActivate(createContext(path, { method: 'POST' }))).rejects.toThrow(ForbiddenException);
-    await expect(guard.canActivate(createContext(path, { method: 'POST' }))).rejects.toThrow('Invalid CSRF token');
+    expect(securityObservability.recordCsrfRejection).toHaveBeenCalledWith(path);
   });
 
   it.each(BFF_PROTECTED_PATHS)('allows mutation with matching csrf header/cookie on %s', async (path) => {
@@ -80,7 +85,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     revokedTokenRepository.findOne.mockResolvedValue({ id: 'revoked-entry' });
 
     await expect(guard.canActivate(createContext(path))).rejects.toThrow(UnauthorizedException);
-    await expect(guard.canActivate(createContext(path))).rejects.toThrow('Token has been revoked');
+    expect(securityObservability.recordRevocationDenial).toHaveBeenCalledWith(path);
   });
 
   it.each(BFF_PROTECTED_PATHS)(
@@ -94,7 +99,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       });
 
       await expect(guard.canActivate(createContext(path))).rejects.toThrow(UnauthorizedException);
-      await expect(guard.canActivate(createContext(path))).rejects.toThrow('Invalid or expired token');
+      expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith('invalid_or_expired_token', path);
     },
   );
 
@@ -108,6 +113,9 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     });
 
     await expect(guard.canActivate(createContext('/users/profile'))).rejects.toThrow(UnauthorizedException);
-    await expect(guard.canActivate(createContext('/users/profile'))).rejects.toThrow('Invalid token payload');
+    expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith(
+      'invalid_token_payload',
+      '/users/profile',
+    );
   });
 });

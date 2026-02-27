@@ -1,27 +1,48 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { AxiosResponse } from 'axios';
+import { randomUUID } from 'crypto';
+import { RequestContextService } from '../request-context/request-context.service';
 
 @Injectable()
 export class HttpServiceWrapper {
   private readonly logger = new Logger(HttpServiceWrapper.name);
   private readonly apiUrl: string;
+  private readonly internalServiceToken?: string;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly requestContextService: RequestContextService,
   ) {
     this.apiUrl = this.configService.get<string>('API_URL') || '';
+    this.internalServiceToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN') || undefined;
+
     if (!this.apiUrl) {
       throw new Error('API_URL is not defined in the environment variables');
     }
+
+    const nodeEnv = (this.configService.get<string>('NODE_ENV') || '').toLowerCase();
+    const requiresInternalToken = nodeEnv === 'production' || nodeEnv === 'staging';
+    if (requiresInternalToken && !this.internalServiceToken) {
+      throw new Error('INTERNAL_SERVICE_TOKEN is required outside local/test environments');
+    }
   }
 
-  private getAuthHeaders(token: string) {
-    return {
-      Authorization: `Bearer ${token}`,
+  private getHeaders(token?: string) {
+    const requestId = this.requestContextService.getRequestId() || randomUUID();
+    const headers: Record<string, string> = {
+      'x-request-id': requestId,
     };
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    if (this.internalServiceToken) {
+      headers['x-internal-service-token'] = this.internalServiceToken;
+    }
+
+    return headers;
   }
 
   async get<T>(endpoint: string, params?: any, token?: string): Promise<T> {
@@ -30,7 +51,7 @@ export class HttpServiceWrapper {
     this.logger.log(`Params: ${JSON.stringify(params)}`);
 
     const url = `${this.apiUrl}/${endpoint}`;
-    const headers = token ? this.getAuthHeaders(token) : {};
+    const headers = this.getHeaders(token);
     this.logger.log(`GET Request to URL: ${url}`);
     try {
       const response = await this.httpService.get<T>(url, { params, headers }).toPromise();
@@ -46,7 +67,7 @@ export class HttpServiceWrapper {
 
   async post<T>(endpoint: string, data: any, token?: string): Promise<T> {
     const url = `${this.apiUrl}/${endpoint}`;
-    const headers = token ? this.getAuthHeaders(token) : {};
+    const headers = this.getHeaders(token);
     try {
       const response = await this.httpService.post<T>(url, data, { headers }).toPromise();
       if (!response) {
@@ -60,7 +81,7 @@ export class HttpServiceWrapper {
 
   async put<T>(endpoint: string, data: any, token?: string): Promise<T> {
     const url = `${this.apiUrl}/${endpoint}`;
-    const headers = token ? this.getAuthHeaders(token) : {};
+    const headers = this.getHeaders(token);
     try {
       const response = await this.httpService.put<T>(url, data, { headers }).toPromise();
       if (!response) {
@@ -74,7 +95,7 @@ export class HttpServiceWrapper {
 
   async delete<T>(endpoint: string, token?: string): Promise<T> {
     const url = `${this.apiUrl}/${endpoint}`;
-    const headers = token ? this.getAuthHeaders(token) : {};
+    const headers = this.getHeaders(token);
     try {
       const response = await this.httpService.delete<T>(url, { headers }).toPromise();
       if (!response) {

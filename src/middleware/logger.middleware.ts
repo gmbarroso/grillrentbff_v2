@@ -9,13 +9,14 @@ export class LoggerMiddleware implements NestMiddleware {
     const { method, originalUrl } = req;
     const userAgent = req.get('user-agent') || '';
     const ip = req.ip;
+    const requestId = req.get('x-request-id') || 'missing-request-id';
 
     res.on('finish', () => {
       const { statusCode } = res;
       const contentLength = res.get('content-length');
 
       this.logger.log(
-        `${method} ${originalUrl} ${statusCode} ${contentLength} - ${userAgent} ${ip}`,
+        `requestId=${requestId} ${method} ${originalUrl} ${statusCode} ${contentLength} - ${userAgent} ${ip}`,
       );
     });
 
