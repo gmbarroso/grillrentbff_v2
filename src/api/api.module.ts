@@ -13,6 +13,7 @@ import { NoticeController } from './controllers/notice.controller';
 import { NoticeService } from './services/notice.service';
 import { BookingController } from './controllers/booking.controller';
 import { BookingService } from './services/booking.service';
+import { resolveJwtSecret } from '../shared/auth/jwt-secret.policy';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { BookingService } from './services/booking.service';
     HttpServiceModule,
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'defaultSecret',
+      secret: resolveJwtSecret(),
       signOptions: { expiresIn: '60m' },
     }),
   ],
