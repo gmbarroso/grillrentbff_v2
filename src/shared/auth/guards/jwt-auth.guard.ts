@@ -1,14 +1,15 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RevokedToken } from '../../../api/entities/revoked-token.entity';
 import { UserRole } from '../../../api/entities/user.entity';
-import { getAuthTokenFromCookieHeader } from '../auth-cookie.util';
+import { getAuthTokenFromCookieHeader, getCsrfTokenFromCookieHeader } from '../auth-cookie.util';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
+  private static readonly CSRF_HEADER = 'x-csrf-token';
 
   constructor(
     private readonly jwtService: JwtService,
@@ -20,6 +21,7 @@ export class JwtAuthGuard implements CanActivate {
     this.logger.log('Validating JWT token');
 
     const request = context.switchToHttp().getRequest();
+    const isMutationMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((request.method || '').toUpperCase());
     const headerToken = request.headers.authorization?.split(' ')[1];
     const cookieToken = getAuthTokenFromCookieHeader(request.headers.cookie);
     const token = headerToken || cookieToken;
@@ -33,6 +35,16 @@ export class JwtAuthGuard implements CanActivate {
     if (isRevoked) {
       this.logger.error('Token has been revoked');
       throw new UnauthorizedException('Token has been revoked');
+    }
+
+    if (isMutationMethod) {
+      const rawCsrfFromHeader = request.headers[JwtAuthGuard.CSRF_HEADER];
+      const csrfFromHeader = Array.isArray(rawCsrfFromHeader) ? rawCsrfFromHeader[0] : rawCsrfFromHeader;
+      const csrfFromCookie = getCsrfTokenFromCookieHeader(request.headers.cookie);
+      if (!csrfFromHeader || !csrfFromCookie || csrfFromHeader !== csrfFromCookie) {
+        this.logger.error('Invalid CSRF token');
+        throw new ForbiddenException('Invalid CSRF token');
+      }
     }
 
     try {

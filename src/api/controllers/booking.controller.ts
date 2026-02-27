@@ -79,6 +79,7 @@ export class BookingController {
     return this.bookingService.checkAvailability(resourceId, startTime, endTime);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('reserved-times')
   async getReservedTimes(
     @Query('resourceType') resourceType: string,

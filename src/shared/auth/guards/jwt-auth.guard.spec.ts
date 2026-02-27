@@ -1,4 +1,4 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const BFF_PROTECTED_PATHS = ['/users/profile', '/users', '/resources', '/bookings', '/notices'];
@@ -14,14 +14,27 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
 
   let guard: JwtAuthGuard;
 
-  const createContext = (path: string, options?: { token?: string; useCookie?: boolean }): ExecutionContext =>
+  const createContext = (
+    path: string,
+    options?: { token?: string; useCookie?: boolean; method?: string; csrfHeader?: string; csrfCookie?: string },
+  ): ExecutionContext =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
+          method: options?.method || 'GET',
           url: path,
           headers: options?.useCookie
-            ? { cookie: `grillrent_session=${options.token || token}` }
-            : { authorization: `Bearer ${options?.token || token}` },
+            ? {
+                cookie: `grillrent_session=${options.token || token}; grillrent_csrf=${
+                  options?.csrfCookie || 'csrf-ok'
+                }`,
+                ...(options?.csrfHeader ? { 'x-csrf-token': options.csrfHeader } : {}),
+              }
+            : {
+                authorization: `Bearer ${options?.token || token}`,
+                ...(options?.csrfHeader ? { 'x-csrf-token': options.csrfHeader } : {}),
+                ...(options?.csrfCookie ? { cookie: `grillrent_csrf=${options.csrfCookie}` } : {}),
+              },
         }),
       }),
     } as unknown as ExecutionContext);
@@ -46,6 +59,21 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   it.each(BFF_PROTECTED_PATHS)('allows cookie-based token on %s', async (path) => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
     await expect(guard.canActivate(createContext(path, { useCookie: true }))).resolves.toBe(true);
+  });
+
+  it.each(BFF_PROTECTED_PATHS)('denies mutation with missing csrf token on %s', async (path) => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    await expect(guard.canActivate(createContext(path, { method: 'POST' }))).rejects.toThrow(ForbiddenException);
+    await expect(guard.canActivate(createContext(path, { method: 'POST' }))).rejects.toThrow('Invalid CSRF token');
+  });
+
+  it.each(BFF_PROTECTED_PATHS)('allows mutation with matching csrf header/cookie on %s', async (path) => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    await expect(
+      guard.canActivate(
+        createContext(path, { method: 'POST', csrfHeader: 'csrf-ok', csrfCookie: 'csrf-ok', useCookie: true }),
+      ),
+    ).resolves.toBe(true);
   });
 
   it.each(BFF_PROTECTED_PATHS)('denies token after logout on %s', async (path) => {

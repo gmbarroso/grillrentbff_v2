@@ -1,6 +1,7 @@
 import { Response } from 'express';
 
 const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'grillrent_session';
+const CSRF_COOKIE_NAME = process.env.CSRF_COOKIE_NAME || 'grillrent_csrf';
 
 const isSecureCookieEnv = () => {
   const env = (process.env.NODE_ENV || '').toLowerCase();
@@ -19,10 +20,16 @@ const parseCookieHeader = (cookieHeader?: string): Record<string, string> => {
 };
 
 export const getAuthCookieName = (): string => AUTH_COOKIE_NAME;
+export const getCsrfCookieName = (): string => CSRF_COOKIE_NAME;
 
 export const getAuthTokenFromCookieHeader = (cookieHeader?: string): string | null => {
   const cookies = parseCookieHeader(cookieHeader);
   return cookies[AUTH_COOKIE_NAME] || null;
+};
+
+export const getCsrfTokenFromCookieHeader = (cookieHeader?: string): string | null => {
+  const cookies = parseCookieHeader(cookieHeader);
+  return cookies[CSRF_COOKIE_NAME] || null;
 };
 
 export const setAuthCookie = (res: Response, token: string, exp?: number): void => {
@@ -39,6 +46,25 @@ export const setAuthCookie = (res: Response, token: string, exp?: number): void 
 export const clearAuthCookie = (res: Response): void => {
   res.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
+    secure: isSecureCookieEnv(),
+    sameSite: 'lax',
+    path: '/',
+  });
+};
+
+export const setCsrfCookie = (res: Response, csrfToken: string): void => {
+  res.cookie(CSRF_COOKIE_NAME, csrfToken, {
+    httpOnly: false,
+    secure: isSecureCookieEnv(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 1000,
+  });
+};
+
+export const clearCsrfCookie = (res: Response): void => {
+  res.clearCookie(CSRF_COOKIE_NAME, {
+    httpOnly: false,
     secure: isSecureCookieEnv(),
     sameSite: 'lax',
     path: '/',

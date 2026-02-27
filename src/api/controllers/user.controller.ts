@@ -6,8 +6,9 @@ import { UserService } from '../services/user.service';
 import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
 import { UserRole } from '../entities/user.entity';
-import { clearAuthCookie, setAuthCookie } from '../../shared/auth/auth-cookie.util';
+import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from '../../shared/auth/auth-cookie.util';
 import { Response } from 'express';
+import { randomBytes } from 'crypto';
 
 @Controller('users')
 export class UserController {
@@ -37,7 +38,9 @@ export class UserController {
   ) {
     this.logger.log(`Logging in user from apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}`);
     const result = await this.userService.login(loginUserDto);
+    const csrfToken = randomBytes(32).toString('hex');
     setAuthCookie(res, result.access_token, result.exp);
+    setCsrfCookie(res, csrfToken);
     return result;
   }
 
@@ -103,6 +106,7 @@ export class UserController {
     this.logger.log('Calling UserService to handle logout');
     const result = await this.userService.logout(token);
     clearAuthCookie(res);
+    clearCsrfCookie(res);
     return result;
   }
 
