@@ -3,8 +3,6 @@ import {
   Logger,
   UnauthorizedException,
   ConflictException,
-  HttpException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -113,25 +111,6 @@ export class UserService {
     if (!decoded || !decoded.exp) {
       this.logger.error('Invalid token: Unable to extract expiration date');
       throw new UnauthorizedException('Invalid token');
-    }
-
-    try {
-      await this.httpService.post('users/logout', {}, token);
-      this.logger.log('Token invalidated in API');
-    } catch (error) {
-      const errorStatus = error instanceof HttpException ? error.getStatus() : 0;
-      const errorResponse = error instanceof HttpException ? error.getResponse() : '';
-      const errorMessage = typeof errorResponse === 'string'
-        ? errorResponse
-        : String((errorResponse as { message?: string })?.message ?? '');
-
-      const alreadyRevokedInApi = errorStatus === 401 && errorMessage.toLowerCase().includes('revoked');
-      if (!alreadyRevokedInApi) {
-        this.logger.error(`Failed to invalidate token in API: ${errorMessage || 'unknown error'}`);
-        throw new ServiceUnavailableException('Unable to complete global logout invalidation');
-      }
-
-      this.logger.warn('Token was already revoked in API; proceeding with local revocation sync');
     }
 
     const expirationDate = new Date(decoded.exp * 1000);

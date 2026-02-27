@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RevokedToken } from '../../../api/entities/revoked-token.entity';
+import { UserRole } from '../../../api/entities/user.entity';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -34,7 +35,8 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const decoded = this.jwtService.verify(token);
 
-      if (!decoded || !decoded.sub || !decoded.name || !decoded.role || !decoded.exp) {
+      const isValidRole = decoded?.role === UserRole.ADMIN || decoded?.role === UserRole.RESIDENT;
+      if (!decoded || !decoded.sub || !decoded.name || !decoded.exp || !isValidRole) {
         this.logger.error('Invalid token payload');
         throw new UnauthorizedException('Invalid token payload');
       }
@@ -42,6 +44,9 @@ export class JwtAuthGuard implements CanActivate {
       request.user = { id: decoded.sub, name: decoded.name, role: decoded.role };
       return true;
     } catch (error) {
+      if (error instanceof UnauthorizedException && error.message === 'Invalid token payload') {
+        throw error;
+      }
       this.logger.error(`Token validation failed: ${error.message}`);
       throw new UnauthorizedException('Invalid or expired token');
     }

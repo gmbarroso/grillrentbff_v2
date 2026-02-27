@@ -5,6 +5,7 @@ import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
 import { UserService } from '../services/user.service';
 import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { UserRole } from '../entities/user.entity';
 
 @Controller('users')
 export class UserController {
@@ -109,7 +110,7 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
 
-    if (userRole !== 'admin') {
+    if (userRole !== UserRole.ADMIN) {
       this.logger.error('Only admins can delete users');
       throw new UnauthorizedException('You do not have permission to delete users');
     }

@@ -1,7 +1,6 @@
-import { HttpException, ServiceUnavailableException } from '@nestjs/common';
 import { UserService } from './user.service';
 
-describe('UserService - Global Logout Invalidation', () => {
+describe('UserService - BFF-owned logout revocation', () => {
   const token = 'phase2-token';
   const decodedToken = { exp: Math.floor(Date.now() / 1000) + 3600 };
 
@@ -33,30 +32,18 @@ describe('UserService - Global Logout Invalidation', () => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
     revokedTokenRepository.create.mockImplementation((payload) => payload);
     revokedTokenRepository.save.mockResolvedValue(undefined);
-    httpService.post.mockResolvedValue({ message: 'Logout successful' });
   });
 
-  it('revokes token in API first, then persists local revocation', async () => {
+  it('persists local revocation and does not call API logout endpoint', async () => {
     await expect(service.logout(token)).resolves.toEqual({ message: 'User logged out successfully' });
 
-    expect(httpService.post).toHaveBeenCalledWith('users/logout', {}, token);
     expect(revokedTokenRepository.save).toHaveBeenCalledTimes(1);
-    expect(httpService.post.mock.invocationCallOrder[0]).toBeLessThan(
-      revokedTokenRepository.save.mock.invocationCallOrder[0],
-    );
+    expect(httpService.post).not.toHaveBeenCalled();
   });
 
-  it('continues local revocation sync if API reports token already revoked', async () => {
-    httpService.post.mockRejectedValue(new HttpException('Token has been revoked', 401));
-
+  it('returns success when token is already revoked in BFF', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue({ token });
     await expect(service.logout(token)).resolves.toEqual({ message: 'User logged out successfully' });
-    expect(revokedTokenRepository.save).toHaveBeenCalledTimes(1);
-  });
-
-  it('fails logout when API revocation cannot be completed', async () => {
-    httpService.post.mockRejectedValue(new HttpException('API Error', 500));
-
-    await expect(service.logout(token)).rejects.toThrow(ServiceUnavailableException);
     expect(revokedTokenRepository.save).not.toHaveBeenCalled();
   });
 });

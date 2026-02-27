@@ -62,4 +62,17 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       await expect(guard.canActivate(createContext(path))).rejects.toThrow('Invalid or expired token');
     },
   );
+
+  it('rejects tokens with role outside canonical enum', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    jwtService.verify.mockReturnValue({
+      sub: 'user-1',
+      name: 'Test User',
+      role: 'super-admin',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    await expect(guard.canActivate(createContext('/users/profile'))).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(createContext('/users/profile'))).rejects.toThrow('Invalid token payload');
+  });
 });
