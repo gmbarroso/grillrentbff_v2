@@ -47,4 +47,19 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     await expect(guard.canActivate(createContext(path))).rejects.toThrow(UnauthorizedException);
     await expect(guard.canActivate(createContext(path))).rejects.toThrow('Token has been revoked');
   });
+
+  it.each(BFF_PROTECTED_PATHS)(
+    'post-cleanup, expired token without revoked record remains denied on %s',
+    async (path) => {
+      revokedTokenRepository.findOne.mockResolvedValue(null);
+      jwtService.verify.mockImplementation(() => {
+        const error = new Error('jwt expired');
+        (error as Error & { name: string }).name = 'TokenExpiredError';
+        throw error;
+      });
+
+      await expect(guard.canActivate(createContext(path))).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(createContext(path))).rejects.toThrow('Invalid or expired token');
+    },
+  );
 });
