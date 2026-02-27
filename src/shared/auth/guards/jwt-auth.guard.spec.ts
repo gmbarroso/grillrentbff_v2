@@ -14,12 +14,14 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
 
   let guard: JwtAuthGuard;
 
-  const createContext = (path: string): ExecutionContext =>
+  const createContext = (path: string, options?: { token?: string; useCookie?: boolean }): ExecutionContext =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
           url: path,
-          headers: { authorization: `Bearer ${token}` },
+          headers: options?.useCookie
+            ? { cookie: `grillrent_session=${options.token || token}` }
+            : { authorization: `Bearer ${options?.token || token}` },
         }),
       }),
     } as unknown as ExecutionContext);
@@ -39,6 +41,11 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
 
     await expect(guard.canActivate(createContext(path))).resolves.toBe(true);
+  });
+
+  it.each(BFF_PROTECTED_PATHS)('allows cookie-based token on %s', async (path) => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    await expect(guard.canActivate(createContext(path, { useCookie: true }))).resolves.toBe(true);
   });
 
   it.each(BFF_PROTECTED_PATHS)('denies token after logout on %s', async (path) => {

@@ -76,9 +76,10 @@ export class UserService {
 
     const payload = { name: user.name, id: user.id, role: user.role };
     const token = this.authService.generateToken(payload);
+    const decoded = this.authService.decodeToken(token);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
-    return { message: 'User logged in successfully', token, access_token: token };
+    return { message: 'User logged in successfully', token, access_token: token, exp: decoded?.exp };
   }
 
   async getProfile(token: string) {
@@ -90,7 +91,6 @@ export class UserService {
 
   async getAllUsers(token: string) {
     this.logger.log('Entering UserService.getAllUsers');
-    this.logger.log(`Token received: ${token}`);
 
     this.logger.log('Redirecting GET all users request to API');
     return this.httpService.get('users', undefined, token);
@@ -106,7 +106,6 @@ export class UserService {
 
   async logout(token: string) {
     this.logger.log('Entering UserService.logout');
-    this.logger.log(`Token to revoke: ${token}`);
     const decoded = this.authService.decodeToken(token);
     if (!decoded || !decoded.exp) {
       this.logger.error('Invalid token: Unable to extract expiration date');

@@ -106,6 +106,7 @@ describe('Phase 5 - BFF auth regression flow', () => {
       message: 'User logged in successfully',
       token: 'phase5-token-user-1',
       access_token: 'phase5-token-user-1',
+      exp: nowSeconds + 3600,
     });
 
     await expect(guard.canActivate(createContext(loginResult.access_token))).resolves.toBe(true);
@@ -118,4 +119,3 @@ describe('Phase 5 - BFF auth regression flow', () => {
     await expect(guard.canActivate(createContext(loginResult.access_token))).rejects.toThrow('Token has been revoked');
   });
 });
-

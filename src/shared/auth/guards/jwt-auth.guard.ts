@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RevokedToken } from '../../../api/entities/revoked-token.entity';
 import { UserRole } from '../../../api/entities/user.entity';
+import { getAuthTokenFromCookieHeader } from '../auth-cookie.util';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -19,7 +20,9 @@ export class JwtAuthGuard implements CanActivate {
     this.logger.log('Validating JWT token');
 
     const request = context.switchToHttp().getRequest();
-    const token = request.headers.authorization?.split(' ')[1];
+    const headerToken = request.headers.authorization?.split(' ')[1];
+    const cookieToken = getAuthTokenFromCookieHeader(request.headers.cookie);
+    const token = headerToken || cookieToken;
 
     if (!token) {
       this.logger.error('Token not provided');
@@ -41,7 +44,7 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      request.user = { id: decoded.sub, name: decoded.name, role: decoded.role };
+      request.user = { id: decoded.sub, name: decoded.name, role: decoded.role, token };
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException && error.message === 'Invalid token payload') {
