@@ -1,4 +1,11 @@
-import { Injectable, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  ConflictException,
+  HttpException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthService } from '../../shared/auth/services/auth.service';
@@ -108,7 +115,31 @@ export class UserService {
       throw new UnauthorizedException('Invalid token');
     }
 
+    try {
+      await this.httpService.post('users/logout', {}, token);
+      this.logger.log('Token invalidated in API');
+    } catch (error) {
+      const errorStatus = error instanceof HttpException ? error.getStatus() : 0;
+      const errorResponse = error instanceof HttpException ? error.getResponse() : '';
+      const errorMessage = typeof errorResponse === 'string'
+        ? errorResponse
+        : String((errorResponse as { message?: string })?.message ?? '');
+
+      const alreadyRevokedInApi = errorStatus === 401 && errorMessage.toLowerCase().includes('revoked');
+      if (!alreadyRevokedInApi) {
+        this.logger.error(`Failed to invalidate token in API: ${errorMessage || 'unknown error'}`);
+        throw new ServiceUnavailableException('Unable to complete global logout invalidation');
+      }
+
+      this.logger.warn('Token was already revoked in API; proceeding with local revocation sync');
+    }
+
     const expirationDate = new Date(decoded.exp * 1000);
+    const existingRevocation = await this.revokedTokenRepository.findOne({ where: { token } });
+    if (existingRevocation) {
+      this.logger.log('Token already revoked in BFF');
+      return { message: 'User logged out successfully' };
+    }
 
     const revokedToken = this.revokedTokenRepository.create({ token, expirationDate });
     await this.revokedTokenRepository.save(revokedToken);
