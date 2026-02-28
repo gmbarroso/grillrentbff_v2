@@ -73,4 +73,19 @@ describe('HttpServiceWrapper', () => {
       () => new HttpServiceWrapper(httpService as any, localConfigService as any, requestContextService as any),
     ).not.toThrow();
   });
+
+  it('requires INTERNAL_SERVICE_TOKEN when NODE_ENV is staging', () => {
+    const stagingConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'API_URL') return 'http://api.internal';
+        if (key === 'INTERNAL_SERVICE_TOKEN') return undefined;
+        if (key === 'NODE_ENV') return 'staging';
+        return undefined;
+      }),
+    };
+
+    expect(
+      () => new HttpServiceWrapper(httpService as any, stagingConfigService as any, requestContextService as any),
+    ).toThrow('INTERNAL_SERVICE_TOKEN is required in production or staging environments');
+  });
 });

@@ -6,12 +6,23 @@ type Bucket = { count: number; resetAt: number };
 
 @Injectable()
 export class EdgeRateLimitMiddleware implements NestMiddleware {
+  private static parseRateLimitNumber(rawValue: string | undefined, fallback: number): number {
+    const parsed = Number(rawValue);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
   private readonly globalBuckets = new Map<string, Bucket>();
   private readonly loginBuckets = new Map<string, Bucket>();
-  private readonly globalWindowMs = Number(process.env.EDGE_RATE_LIMIT_WINDOW_MS || 60_000);
-  private readonly globalMax = Number(process.env.EDGE_RATE_LIMIT_MAX || 120);
-  private readonly loginWindowMs = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || 900_000);
-  private readonly loginMax = Number(process.env.LOGIN_RATE_LIMIT_MAX || 8);
+  private readonly globalWindowMs = EdgeRateLimitMiddleware.parseRateLimitNumber(
+    process.env.EDGE_RATE_LIMIT_WINDOW_MS,
+    60_000,
+  );
+  private readonly globalMax = EdgeRateLimitMiddleware.parseRateLimitNumber(process.env.EDGE_RATE_LIMIT_MAX, 120);
+  private readonly loginWindowMs = EdgeRateLimitMiddleware.parseRateLimitNumber(
+    process.env.LOGIN_RATE_LIMIT_WINDOW_MS,
+    900_000,
+  );
+  private readonly loginMax = EdgeRateLimitMiddleware.parseRateLimitNumber(process.env.LOGIN_RATE_LIMIT_MAX, 8);
 
   constructor(private readonly securityObservability: SecurityObservabilityService) {}
 

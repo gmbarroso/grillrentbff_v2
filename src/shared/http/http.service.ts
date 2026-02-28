@@ -25,7 +25,7 @@ export class HttpServiceWrapper {
     const nodeEnv = (this.configService.get<string>('NODE_ENV') || '').toLowerCase();
     const requiresInternalToken = nodeEnv === 'production' || nodeEnv === 'staging';
     if (requiresInternalToken && !this.internalServiceToken) {
-      throw new Error('INTERNAL_SERVICE_TOKEN is required outside local/test environments');
+      throw new Error('INTERNAL_SERVICE_TOKEN is required in production or staging environments');
     }
   }
 

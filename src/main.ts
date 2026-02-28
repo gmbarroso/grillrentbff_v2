@@ -30,7 +30,7 @@ async function bootstrap() {
         callback(null, true);
         return;
       }
-      callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
+      callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token',

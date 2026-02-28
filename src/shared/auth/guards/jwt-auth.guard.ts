@@ -27,6 +27,7 @@ export class JwtAuthGuard implements CanActivate {
     const headerToken = request.headers.authorization?.split(' ')[1];
     const cookieToken = getAuthTokenFromCookieHeader(request.headers.cookie);
     const token = headerToken || cookieToken;
+    const isCookieAuthenticated = !headerToken && Boolean(cookieToken);
 
     if (!token) {
       this.logger.error('Token not provided');
@@ -41,7 +42,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Token has been revoked');
     }
 
-    if (isMutationMethod) {
+    if (isMutationMethod && isCookieAuthenticated) {
       const rawCsrfFromHeader = request.headers[JwtAuthGuard.CSRF_HEADER];
       const csrfFromHeader = Array.isArray(rawCsrfFromHeader) ? rawCsrfFromHeader[0] : rawCsrfFromHeader;
       const csrfFromCookie = getCsrfTokenFromCookieHeader(request.headers.cookie);

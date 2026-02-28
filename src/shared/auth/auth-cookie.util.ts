@@ -14,7 +14,12 @@ const parseCookieHeader = (cookieHeader?: string): Record<string, string> => {
   return cookieHeader.split(';').reduce((acc, cookiePart) => {
     const [rawKey, ...rest] = cookiePart.trim().split('=');
     if (!rawKey || rest.length === 0) return acc;
-    acc[rawKey] = decodeURIComponent(rest.join('='));
+    const rawValue = rest.join('=');
+    try {
+      acc[rawKey] = decodeURIComponent(rawValue);
+    } catch {
+      acc[rawKey] = rawValue;
+    }
     return acc;
   }, {} as Record<string, string>);
 };

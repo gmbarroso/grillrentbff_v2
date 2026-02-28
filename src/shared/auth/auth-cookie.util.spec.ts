@@ -20,6 +20,10 @@ describe('auth-cookie util', () => {
     expect(getCsrfTokenFromCookieHeader('foo=1; grillrent_csrf=csrf-123; bar=2')).toBe('csrf-123');
   });
 
+  it('falls back to raw value when cookie has malformed percent-encoding', () => {
+    expect(getAuthTokenFromCookieHeader('grillrent_session=abc%ZZ123')).toBe('abc%ZZ123');
+  });
+
   it('sets and clears auth cookie with secure defaults', () => {
     const res = {
       cookie: jest.fn(),

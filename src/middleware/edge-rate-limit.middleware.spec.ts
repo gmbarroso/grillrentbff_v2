@@ -68,4 +68,18 @@ describe('EdgeRateLimitMiddleware', () => {
     expect(blockedRes.status).toHaveBeenCalledWith(429);
     expect(securityObservability.recordRateLimitEvent).toHaveBeenCalledWith('login', '127.0.0.1');
   });
+
+  it('falls back to defaults when rate limit env values are invalid', () => {
+    process.env.EDGE_RATE_LIMIT_WINDOW_MS = 'abc';
+    process.env.EDGE_RATE_LIMIT_MAX = 'invalid';
+    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = 'NaN';
+    process.env.LOGIN_RATE_LIMIT_MAX = '-1';
+
+    const middleware = new EdgeRateLimitMiddleware(securityObservability as any);
+
+    expect((middleware as any).globalWindowMs).toBe(60_000);
+    expect((middleware as any).globalMax).toBe(120);
+    expect((middleware as any).loginWindowMs).toBe(900_000);
+    expect((middleware as any).loginMax).toBe(8);
+  });
 });

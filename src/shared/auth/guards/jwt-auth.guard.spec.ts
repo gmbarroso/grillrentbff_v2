@@ -68,8 +68,15 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
 
   it.each(BFF_PROTECTED_PATHS)('denies mutation with missing csrf token on %s', async (path) => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
-    await expect(guard.canActivate(createContext(path, { method: 'POST' }))).rejects.toThrow(ForbiddenException);
+    await expect(guard.canActivate(createContext(path, { method: 'POST', useCookie: true }))).rejects.toThrow(
+      ForbiddenException,
+    );
     expect(securityObservability.recordCsrfRejection).toHaveBeenCalledWith(path);
+  });
+
+  it.each(BFF_PROTECTED_PATHS)('allows bearer-auth mutation without csrf cookie/header on %s', async (path) => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    await expect(guard.canActivate(createContext(path, { method: 'POST', useCookie: false }))).resolves.toBe(true);
   });
 
   it.each(BFF_PROTECTED_PATHS)('allows mutation with matching csrf header/cookie on %s', async (path) => {
