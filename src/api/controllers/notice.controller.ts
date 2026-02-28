@@ -12,7 +12,7 @@ export class NoticeController {
   @Post()
   async createNotice(@Body() body: any, @Req() req: any) {
     this.logger.log('Received POST /notices request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -27,7 +27,7 @@ export class NoticeController {
   @Get()
   async getAllNotices(@Req() req: any) {
     this.logger.log('Received GET /notices request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -42,7 +42,7 @@ export class NoticeController {
   @Put(':id')
   async updateNotice(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     this.logger.log(`Received PUT /notices/${id} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -57,7 +57,7 @@ export class NoticeController {
   @Delete(':id')
   async deleteNotice(@Param('id') id: string, @Req() req: any) {
     this.logger.log(`Received DELETE /notices/${id} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');

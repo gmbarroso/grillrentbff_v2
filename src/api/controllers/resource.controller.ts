@@ -12,7 +12,7 @@ export class ResourceController {
   @Post()
   async createResource(@Body() body: any, @Req() req: any) {
     this.logger.log('Received POST /resources request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -27,7 +27,7 @@ export class ResourceController {
   @Get()
   async getAllResources(@Req() req: any) {
     this.logger.log('Received GET /resources request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -42,7 +42,7 @@ export class ResourceController {
   @Get(':id')
   async getResource(@Param('id') id: string, @Req() req: any) {
     this.logger.log(`Received GET /resources/${id} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -57,7 +57,7 @@ export class ResourceController {
   @Put(':id')
   async updateResource(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     this.logger.log(`Received PUT /resources/${id} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -72,7 +72,7 @@ export class ResourceController {
   @Delete(':id')
   async deleteResource(@Param('id') id: string, @Req() req: any) {
     this.logger.log(`Received DELETE /resources/${id} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');

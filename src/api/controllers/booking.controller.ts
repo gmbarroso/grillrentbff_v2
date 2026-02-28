@@ -12,7 +12,7 @@ export class BookingController {
   @Post()
   async createBooking(@Body() body: any, @Req() req: any) {
     this.logger.log('Received POST /bookings request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -27,7 +27,7 @@ export class BookingController {
   @Get('user/:userId')
   async getBookingsByUser(@Param('userId') userId: string, @Req() req: any) {
     this.logger.log(`Received GET /bookings/user/${userId} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -47,7 +47,7 @@ export class BookingController {
     @Query('endDate') endDate?: string,
   ) {
     this.logger.log('Received GET /bookings request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -62,7 +62,7 @@ export class BookingController {
   @Delete(':id')
   async deleteBooking(@Param('id') id: string, @Req() req: any) {
     this.logger.log(`Received DELETE /bookings/${id} request`);
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -84,6 +84,7 @@ export class BookingController {
     return this.bookingService.checkAvailability(resourceId, startTime, endTime);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('reserved-times')
   async getReservedTimes(
     @Query('resourceType') resourceType: string,
@@ -91,7 +92,7 @@ export class BookingController {
     @Req() req: any,
   ) {
     this.logger.log('Received GET /bookings/reserved-times request');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');

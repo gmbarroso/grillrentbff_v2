@@ -1,10 +1,14 @@
-import { Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res } from '@nestjs/common';
 import { CreateUserDto, CreateUserSchema } from '../dto/create-user.dto';
 import { LoginUserDto, LoginUserSchema } from '../dto/login-user.dto';
 import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
 import { UserService } from '../services/user.service';
 import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { UserRole } from '../entities/user.entity';
+import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from '../../shared/auth/auth-cookie.util';
+import { Response } from 'express';
+import { randomBytes } from 'crypto';
 
 @Controller('users')
 export class UserController {
@@ -28,16 +32,23 @@ export class UserController {
   }
 
   @Post('login')
-  async login(@Body(new JoiValidationPipe(LoginUserSchema)) loginUserDto: LoginUserDto) {
+  async login(
+    @Body(new JoiValidationPipe(LoginUserSchema)) loginUserDto: LoginUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     this.logger.log(`Logging in user from apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}`);
-    return this.userService.login(loginUserDto);
+    const result = await this.userService.login(loginUserDto);
+    const csrfToken = randomBytes(32).toString('hex');
+    setAuthCookie(res, result.access_token, result.exp);
+    setCsrfCookie(res, csrfToken);
+    return result;
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Req() req: any) {
     this.logger.log('Entering UserController.getProfile');
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -53,7 +64,7 @@ export class UserController {
   async getAllUsers(@Req() req: any) {
     this.logger.log('Entering UserController.getAllUsers');
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -69,7 +80,7 @@ export class UserController {
   async updateProfile(@Req() req: any, @Body(new JoiValidationPipe(UpdateUserSchema)) updateData: UpdateUserDto) {
     this.logger.log('Entering UserController.updateProfile');
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -82,10 +93,10 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req: any) {
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     this.logger.log('Entering UserController.logout');
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
 
     if (!token) {
       this.logger.error('Authorization token is missing in the request');
@@ -93,7 +104,10 @@ export class UserController {
     }
 
     this.logger.log('Calling UserService to handle logout');
-    return this.userService.logout(token);
+    const result = await this.userService.logout(token);
+    clearAuthCookie(res);
+    clearCsrfCookie(res);
+    return result;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -101,7 +115,7 @@ export class UserController {
   async deleteUser(@Req() req: any, @Param('id') userId: string) {
     this.logger.log('Entering UserController.deleteUser');
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.user?.token;
     const userRole = req.user?.role;
 
     if (!token) {
@@ -109,7 +123,7 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
 
-    if (userRole !== 'admin') {
+    if (userRole !== UserRole.ADMIN) {
       this.logger.error('Only admins can delete users');
       throw new UnauthorizedException('You do not have permission to delete users');
     }
