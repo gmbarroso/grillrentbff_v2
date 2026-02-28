@@ -8,6 +8,12 @@ import {
 } from './auth-cookie.util';
 
 describe('auth-cookie util', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
   it('extracts auth token from cookie header', () => {
     expect(getAuthTokenFromCookieHeader('foo=1; grillrent_session=abc123; bar=2')).toBe('abc123');
   });
@@ -78,6 +84,34 @@ describe('auth-cookie util', () => {
         httpOnly: false,
         sameSite: 'lax',
         path: '/',
+      }),
+    );
+  });
+
+  it('uses SameSite=None and Secure=true in production-like environments', () => {
+    process.env.NODE_ENV = 'production';
+    const res = {
+      cookie: jest.fn(),
+      clearCookie: jest.fn(),
+    };
+
+    setAuthCookie(res as any, 'jwt-token', Math.floor(Date.now() / 1000) + 3600);
+    setCsrfCookie(res as any, 'csrf-value');
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      'grillrent_session',
+      'jwt-token',
+      expect.objectContaining({
+        secure: true,
+        sameSite: 'none',
+      }),
+    );
+    expect(res.cookie).toHaveBeenCalledWith(
+      'grillrent_csrf',
+      'csrf-value',
+      expect.objectContaining({
+        secure: true,
+        sameSite: 'none',
       }),
     );
   });
