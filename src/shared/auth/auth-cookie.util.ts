@@ -8,6 +8,10 @@ const isSecureCookieEnv = () => {
   return !['local', 'development', 'dev', 'test'].includes(env);
 };
 
+const getCookieSameSite = (): 'lax' | 'none' => {
+  return isSecureCookieEnv() ? 'none' : 'lax';
+};
+
 const parseCookieHeader = (cookieHeader?: string): Record<string, string> => {
   if (!cookieHeader) return {};
 
@@ -38,40 +42,44 @@ export const getCsrfTokenFromCookieHeader = (cookieHeader?: string): string | nu
 };
 
 export const setAuthCookie = (res: Response, token: string, exp?: number): void => {
+  const sameSite = getCookieSameSite();
   const maxAge = typeof exp === 'number' ? Math.max(0, exp * 1000 - Date.now()) : 60 * 60 * 1000;
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: isSecureCookieEnv(),
-    sameSite: 'lax',
+    secure: sameSite === 'none' || isSecureCookieEnv(),
+    sameSite,
     path: '/',
     maxAge,
   });
 };
 
 export const clearAuthCookie = (res: Response): void => {
+  const sameSite = getCookieSameSite();
   res.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
-    secure: isSecureCookieEnv(),
-    sameSite: 'lax',
+    secure: sameSite === 'none' || isSecureCookieEnv(),
+    sameSite,
     path: '/',
   });
 };
 
 export const setCsrfCookie = (res: Response, csrfToken: string): void => {
+  const sameSite = getCookieSameSite();
   res.cookie(CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false,
-    secure: isSecureCookieEnv(),
-    sameSite: 'lax',
+    secure: sameSite === 'none' || isSecureCookieEnv(),
+    sameSite,
     path: '/',
     maxAge: 60 * 60 * 1000,
   });
 };
 
 export const clearCsrfCookie = (res: Response): void => {
+  const sameSite = getCookieSameSite();
   res.clearCookie(CSRF_COOKIE_NAME, {
     httpOnly: false,
-    secure: isSecureCookieEnv(),
-    sameSite: 'lax',
+    secure: sameSite === 'none' || isSecureCookieEnv(),
+    sameSite,
     path: '/',
   });
 };
