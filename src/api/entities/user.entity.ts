@@ -43,6 +43,6 @@ export class User {
   })
   role!: UserRole;
 
-  @Column({ type: 'uuid', nullable: true })
-  organizationId?: string;
+  @Column({ type: 'uuid' })
+  organizationId!: string;
 }

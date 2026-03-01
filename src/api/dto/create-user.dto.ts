@@ -11,8 +11,27 @@ export class CreateUserDto {
   role!: UserRole;
 }
 
+const normalizeSlug = (value: string): string =>
+  value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/--+/g, '-');
+
 export const CreateUserSchema = Joi.object({
-  organizationSlug: Joi.string().trim().lowercase().pattern(/^[a-z0-9-]+$/).required(),
+  organizationSlug: Joi.string()
+    .trim()
+    .required()
+    .custom((value, helpers) => {
+      if (!normalizeSlug(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    }, 'organization slug normalization')
+    .messages({ 'any.invalid': 'organizationSlug must contain at least one alphanumeric character' }),
   name: Joi.string().required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
