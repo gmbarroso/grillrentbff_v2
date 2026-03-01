@@ -45,10 +45,10 @@ export class BookingService {
     }
   }
 
-  async checkAvailability(resourceId: string, startTime: string, endTime: string) {
+  async checkAvailability(resourceId: string, startTime: string, endTime: string, token: string) {
     const query = { startTime, endTime };
     try {
-      return await this.httpService.get(`${this.apiUrl}/availability/${resourceId}`, query);
+      return await this.httpService.get(`${this.apiUrl}/availability/${resourceId}`, query, token);
     } catch (error) {
       this.logger.error(`Error in checkAvailability: ${error.message}`);
       throw error;
