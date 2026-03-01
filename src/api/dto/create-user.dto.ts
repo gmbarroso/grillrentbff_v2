@@ -1,5 +1,6 @@
-import * as Joi from 'joi';
+import * as Joi from '@hapi/joi';
 import { UserRole } from '../entities/user.entity';
+import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 
 export class CreateUserDto {
   organizationSlug!: string;
@@ -10,16 +11,6 @@ export class CreateUserDto {
   block!: number;
   role!: UserRole;
 }
-
-const normalizeSlug = (value: string): string =>
-  value
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/--+/g, '-');
 
 export const CreateUserSchema = Joi.object({
   organizationSlug: Joi.string()

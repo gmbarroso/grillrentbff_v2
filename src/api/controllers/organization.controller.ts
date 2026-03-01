@@ -18,7 +18,7 @@ export class OrganizationController {
     if (req.user?.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admins can create organizations');
     }
-    return this.organizationService.create(createOrganizationDto);
+    return this.organizationService.create(createOrganizationDto, req.user.token);
   }
 
   @Get('slug/:slug')

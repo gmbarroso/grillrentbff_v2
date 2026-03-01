@@ -1,4 +1,5 @@
 import * as Joi from '@hapi/joi';
+import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 
 export class LoginUserDto {
   organizationSlug!: string;
@@ -6,16 +7,6 @@ export class LoginUserDto {
   block!: number;
   password!: string;
 }
-
-const normalizeSlug = (value: string): string =>
-  value
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/--+/g, '-');
 
 export const LoginUserSchema = Joi.object({
   organizationSlug: Joi.string()
