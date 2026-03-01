@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 interface RequestContext {
   requestId: string;
+  organizationId?: string;
 }
 
 @Injectable()
@@ -15,5 +16,16 @@ export class RequestContextService {
 
   getRequestId(): string | undefined {
     return this.storage.getStore()?.requestId;
+  }
+
+  setOrganizationId(organizationId: string): void {
+    const store = this.storage.getStore();
+    if (store) {
+      store.organizationId = organizationId;
+    }
+  }
+
+  getOrganizationId(): string | undefined {
+    return this.storage.getStore()?.organizationId;
   }
 }

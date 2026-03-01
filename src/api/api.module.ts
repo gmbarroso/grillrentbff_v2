@@ -14,6 +14,8 @@ import { NoticeService } from './services/notice.service';
 import { BookingController } from './controllers/booking.controller';
 import { BookingService } from './services/booking.service';
 import { resolveJwtSecret } from '../shared/auth/jwt-secret.policy';
+import { OrganizationService } from './services/organization.service';
+import { OrganizationController } from './controllers/organization.controller';
 
 @Module({
   imports: [
@@ -25,8 +27,8 @@ import { resolveJwtSecret } from '../shared/auth/jwt-secret.policy';
       signOptions: { expiresIn: '60m' },
     }),
   ],
-  controllers: [UserController, ResourceController, NoticeController, BookingController],
-  providers: [UserService, AuthService, ResourceService, NoticeService, BookingService],
+  controllers: [UserController, ResourceController, NoticeController, BookingController, OrganizationController],
+  providers: [UserService, AuthService, ResourceService, NoticeService, BookingService, OrganizationService],
   exports: [UserService, JwtModule],
 })
 export class UserModule {}

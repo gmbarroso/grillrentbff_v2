@@ -3,6 +3,7 @@ import {
   Logger,
   UnauthorizedException,
   ConflictException,
+  HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,7 @@ import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
 import { RevokedToken } from '../entities/revoked-token.entity';
+import { OrganizationService } from './organization.service';
 
 @Injectable()
 export class UserService {
@@ -25,20 +27,27 @@ export class UserService {
     private readonly revokedTokenRepository: Repository<RevokedToken>,
     private readonly authService: AuthService,
     private readonly httpService: HttpServiceWrapper,
+    private readonly organizationService: OrganizationService,
   ) {}
 
-  async findUserByApartmentAndBlock(apartment: string, block: number): Promise<User | undefined> {
+  async findUserByApartmentAndBlock(
+    apartment: string,
+    block: number,
+    organizationId: string,
+  ): Promise<User | undefined> {
     this.logger.log(`Searching for user in apartment: ${apartment}, block: ${block}`);
-    const user = await this.userRepository.findOne({ where: { apartment, block } });
+    const user = await this.userRepository.findOne({ where: { apartment, block, organizationId } });
     return user || undefined;
   }
 
   async register(createUserDto: CreateUserDto) {
-    this.logger.log(`Registering user: ${createUserDto.email}`);
+    this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
+    const organization = await this.resolveOrganizationBySlug(createUserDto.organizationSlug);
+
     const userExists = await this.userRepository.findOne({
       where: [
-        { email: createUserDto.email },
-        { apartment: createUserDto.apartment, block: createUserDto.block },
+        { email: createUserDto.email, organizationId: organization.id },
+        { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
       ],
     });
     
@@ -46,10 +55,12 @@ export class UserService {
       throw new ConflictException('User already exists');
     }
 
+    const { organizationSlug: _organizationSlug, ...userPayload } = createUserDto;
     const hashedPassword = await this.authService.hashPassword(createUserDto.password);
     const newUser = this.userRepository.create({
-      ...createUserDto,
+      ...userPayload,
       password: hashedPassword,
+      organizationId: organization.id,
     });
 
     await this.userRepository.save(newUser);
@@ -59,8 +70,11 @@ export class UserService {
   }
 
   async login(loginUserDto: LoginUserDto) {
-    this.logger.log(`Logging in user from apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}`);
-    const user = await this.findUserByApartmentAndBlock(loginUserDto.apartment, loginUserDto.block);
+    this.logger.log(
+      `Logging in user from apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}, organization slug: ${loginUserDto.organizationSlug}`,
+    );
+    const organization = await this.resolveOrganizationBySlug(loginUserDto.organizationSlug);
+    const user = await this.findUserByApartmentAndBlock(loginUserDto.apartment, loginUserDto.block, organization.id);
 
     if (!user) {
       this.logger.warn(`User not found for apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}`);
@@ -74,7 +88,7 @@ export class UserService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { name: user.name, id: user.id, role: user.role };
+    const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id };
     const token = this.authService.generateToken(payload);
     const decoded = this.authService.decodeToken(token);
 
@@ -113,13 +127,14 @@ export class UserService {
     }
 
     const expirationDate = new Date(decoded.exp * 1000);
+    const organizationId = typeof decoded?.organizationId === 'string' ? decoded.organizationId : undefined;
     const existingRevocation = await this.revokedTokenRepository.findOne({ where: { token } });
     if (existingRevocation) {
       this.logger.log('Token already revoked in BFF');
       return { message: 'User logged out successfully' };
     }
 
-    const revokedToken = this.revokedTokenRepository.create({ token, expirationDate });
+    const revokedToken = this.revokedTokenRepository.create({ token, expirationDate, organizationId });
     await this.revokedTokenRepository.save(revokedToken);
 
     this.logger.log('Token invalidated successfully');
@@ -132,5 +147,16 @@ export class UserService {
     this.logger.log('Redirecting DELETE user request to API');
 
     return this.httpService.delete(`users/${userId}`, token);
+  }
+
+  private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {
+    try {
+      return await this.organizationService.findBySlug(slug);
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() === 404) {
+        throw new UnauthorizedException('Invalid condominium code');
+      }
+      throw error;
+    }
   }
 }

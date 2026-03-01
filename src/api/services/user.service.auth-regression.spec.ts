@@ -9,6 +9,7 @@ describe('Phase 5 - BFF auth regression flow', () => {
   const revokedTokens = new Set<string>();
   const userRecord = {
     id: 'user-1',
+    organizationId: '9dd02335-74fa-487b-99f3-f3e6f9fba2af',
     name: 'Resident User',
     email: 'resident@example.com',
     password: 'hashed-password',
@@ -17,9 +18,26 @@ describe('Phase 5 - BFF auth regression flow', () => {
     role: UserRole.RESIDENT,
   };
 
+  const organizationService = {
+    findBySlug: jest.fn(async (slug: string) => {
+      if (slug === 'chacara-sacopa') {
+        return {
+          id: '9dd02335-74fa-487b-99f3-f3e6f9fba2af',
+          slug: 'chacara-sacopa',
+          name: 'Chacara Sacopa',
+        };
+      }
+      return null;
+    }),
+  };
+
   const userRepository = {
     findOne: jest.fn(async ({ where }: any) => {
-      if (where?.apartment === userRecord.apartment && where?.block === userRecord.block) {
+      if (
+        where?.apartment === userRecord.apartment
+        && where?.block === userRecord.block
+        && where?.organizationId === userRecord.organizationId
+      ) {
         return userRecord;
       }
       return null;
@@ -51,7 +69,7 @@ describe('Phase 5 - BFF auth regression flow', () => {
       if (!token.startsWith('phase5-token-')) {
         return null;
       }
-      return { exp: nowSeconds + 3600 };
+      return { exp: nowSeconds + 3600, organizationId: userRecord.organizationId };
     }),
   };
 
@@ -62,7 +80,13 @@ describe('Phase 5 - BFF auth regression flow', () => {
   const jwtService = {
     verify: jest.fn((token: string) => {
       if (token.startsWith('phase5-token-')) {
-        return { sub: 'user-1', name: 'Resident User', role: UserRole.RESIDENT, exp: nowSeconds + 3600 };
+        return {
+          sub: 'user-1',
+          name: 'Resident User',
+          role: UserRole.RESIDENT,
+          organizationId: userRecord.organizationId,
+          exp: nowSeconds + 3600,
+        };
       }
       throw new Error('invalid token');
     }),
@@ -72,12 +96,17 @@ describe('Phase 5 - BFF auth regression flow', () => {
     recordCsrfRejection: jest.fn(),
     recordRevocationDenial: jest.fn(),
   };
+  const requestContextService = {
+    setOrganizationId: jest.fn(),
+  };
 
   const createContext = (token: string) =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
           headers: { authorization: `Bearer ${token}` },
+          method: 'GET',
+          url: '/users/profile',
         }),
       }),
     } as any);
@@ -95,13 +124,20 @@ describe('Phase 5 - BFF auth regression flow', () => {
       revokedTokenRepository as any,
       authService as any,
       httpService as any,
+      organizationService as any,
     );
 
-    guard = new JwtAuthGuard(jwtService as any, revokedTokenRepository as any, securityObservability as any);
+    guard = new JwtAuthGuard(
+      jwtService as any,
+      revokedTokenRepository as any,
+      securityObservability as any,
+      requestContextService as any,
+    );
   });
 
   it('preserves login -> protected -> logout -> denied flow and token aliases', async () => {
     const loginResult = await userService.login({
+      organizationSlug: 'chacara-sacopa',
       apartment: '101',
       block: 1,
       password: 'password123',
