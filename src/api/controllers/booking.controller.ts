@@ -73,15 +73,23 @@ export class BookingController {
     return this.bookingService.deleteBooking(id, token);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('availability/:resourceId')
   async checkAvailability(
     @Param('resourceId') resourceId: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
+    @Req() req: any,
   ) {
+    const token = req.user?.token;
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
     this.logger.log(`Received GET /bookings/availability/${resourceId} request`);
     this.logger.log(`Checking availability for resource ID: ${resourceId}`);
-    return this.bookingService.checkAvailability(resourceId, startTime, endTime);
+    return this.bookingService.checkAvailability(resourceId, startTime, endTime, token);
   }
 
   @UseGuards(JwtAuthGuard)
