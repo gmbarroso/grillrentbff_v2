@@ -26,12 +26,13 @@ describe('BFF BookingService', () => {
       page: 1,
       lastPage: 1,
     };
+    const expectedResult = JSON.parse(JSON.stringify(payload));
 
     httpService.get.mockResolvedValue(payload);
 
     const result = await service.getAllBookings({ page: 1 }, 'jwt-token');
 
-    expect(result).toBe(payload);
+    expect(result).toEqual(expectedResult);
     expect(httpService.get).toHaveBeenCalledWith('bookings', { page: 1 }, 'jwt-token');
   });
 });
