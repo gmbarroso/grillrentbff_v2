@@ -49,18 +49,18 @@ describe('UserController', () => {
       exp: Math.floor(Date.now() / 1000) + 3600,
     } as any);
 
-    const response = await controller.login(
-      {
-        organizationSlug: 'chacara-sacopa',
-        apartment: '101',
-        block: 1,
-        password: 'password123',
-      } as any,
-      {} as any,
-    );
+    const loginUserDto = {
+      organizationSlug: 'chacara-sacopa',
+      apartment: '101',
+      block: 1,
+      password: 'password123',
+    } as any;
+
+    const response = await controller.login(loginUserDto, {} as any);
 
     expect(response.csrfToken).toMatch(/^[0-9a-f]{64}$/);
     expect(setAuthCookie).toHaveBeenCalledWith(expect.anything(), 'jwt-token', expect.any(Number));
     expect(setCsrfCookie).toHaveBeenCalledWith(expect.anything(), response.csrfToken);
+    expect(service.login).toHaveBeenCalledWith(loginUserDto);
   });
 });
