@@ -56,11 +56,12 @@ describe('UserController', () => {
       password: 'password123',
     } as any;
 
-    const response = await controller.login(loginUserDto, {} as any);
+    const res = {} as any;
+    const response = await controller.login(loginUserDto, res);
 
     expect(response.csrfToken).toMatch(/^[0-9a-f]{64}$/);
-    expect(setAuthCookie).toHaveBeenCalledWith(expect.anything(), 'jwt-token', expect.any(Number));
-    expect(setCsrfCookie).toHaveBeenCalledWith(expect.anything(), response.csrfToken);
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'jwt-token', expect.any(Number));
+    expect(setCsrfCookie).toHaveBeenCalledWith(res, response.csrfToken);
     expect(service.login).toHaveBeenCalledWith(loginUserDto);
   });
 });
