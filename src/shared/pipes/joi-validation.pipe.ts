@@ -8,7 +8,9 @@ export class JoiValidationPipe implements PipeTransform {
   constructor(private schema: ObjectSchema) {}
 
   transform(value: any, metadata: ArgumentMetadata) {
-    this.logger.log(`Validating value: ${JSON.stringify(value)}`);
+    this.logger.log(
+      `Validating input: type=${metadata.type}, metatype=${metadata.metatype && metadata.metatype.name ? metadata.metatype.name : 'unknown'}`
+    );
     const { error, value: validatedValue } = this.schema.validate(value);
     if (error) {
       this.logger.error(`Validation failed: ${error.message}`);
