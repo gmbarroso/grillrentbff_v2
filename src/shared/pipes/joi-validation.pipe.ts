@@ -9,11 +9,11 @@ export class JoiValidationPipe implements PipeTransform {
 
   transform(value: any, metadata: ArgumentMetadata) {
     this.logger.log(`Validating value: ${JSON.stringify(value)}`);
-    const { error } = this.schema.validate(value);
+    const { error, value: validatedValue } = this.schema.validate(value);
     if (error) {
       this.logger.error(`Validation failed: ${error.message}`);
       throw new BadRequestException('Validation failed');
     }
-    return value;
+    return validatedValue;
   }
 }

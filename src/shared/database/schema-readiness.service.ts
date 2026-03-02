@@ -18,14 +18,28 @@ export class SchemaReadinessService implements OnModuleInit {
       return;
     }
 
-    const hasOrganizationColumn = await this.checkColumnExists('revoked_token', 'organizationId');
-    if (!hasOrganizationColumn) {
+    const checks = [
+      { tableName: 'revoked_token', columnName: 'organizationId' },
+      { tableName: 'user', columnName: 'organizationId' },
+    ];
+
+    const missingColumns: string[] = [];
+    for (const check of checks) {
+      const exists = await this.checkColumnExists(check.tableName, check.columnName);
+      if (!exists) {
+        missingColumns.push(`${check.tableName}.${check.columnName}`);
+      }
+    }
+
+    if (missingColumns.length > 0) {
       throw new Error(
-        'DB schema is missing revoked_token.organizationId. Apply organization multitenancy migration before starting the BFF.',
+        `DB schema is missing required organization columns: ${missingColumns.join(
+          ', ',
+        )}. Apply organization multitenancy migration before starting the BFF.`,
       );
     }
 
-    this.logger.log('Schema readiness check passed for revoked_token.organizationId');
+    this.logger.log('Schema readiness check passed for required organization columns');
   }
 
   private async checkColumnExists(tableName: string, columnName: string): Promise<boolean> {
