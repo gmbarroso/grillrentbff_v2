@@ -34,7 +34,10 @@ export class UserController {
     const csrfToken = randomBytes(32).toString('hex');
     setAuthCookie(res, result.access_token, result.exp);
     setCsrfCookie(res, csrfToken);
-    return result;
+    return {
+      ...result,
+      csrfToken,
+    };
   }
 
   @UseGuards(JwtAuthGuard)
