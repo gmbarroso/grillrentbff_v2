@@ -13,6 +13,9 @@ describe('UserService - BFF-owned logout revocation', () => {
   const authService = {
     decodeToken: jest.fn(),
   };
+  const organizationService = {
+    findBySlug: jest.fn(),
+  };
   const httpService = {
     post: jest.fn(),
   };
@@ -26,9 +29,10 @@ describe('UserService - BFF-owned logout revocation', () => {
       revokedTokenRepository as any,
       authService as any,
       httpService as any,
+      organizationService as any,
     );
 
-    authService.decodeToken.mockReturnValue(decodedToken);
+    authService.decodeToken.mockReturnValue({ ...decodedToken, organizationId: 'org-1' });
     revokedTokenRepository.findOne.mockResolvedValue(null);
     revokedTokenRepository.create.mockImplementation((payload) => payload);
     revokedTokenRepository.save.mockResolvedValue(undefined);

@@ -6,6 +6,7 @@ import { RevokedToken } from '../../../api/entities/revoked-token.entity';
 import { UserRole } from '../../../api/entities/user.entity';
 import { getAuthTokenFromCookieHeader, getCsrfTokenFromCookieHeader } from '../auth-cookie.util';
 import { SecurityObservabilityService } from '../../security/security-observability.service';
+import { RequestContextService } from '../../request-context/request-context.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -17,6 +18,7 @@ export class JwtAuthGuard implements CanActivate {
     @InjectRepository(RevokedToken)
     private readonly revokedTokenRepository: Repository<RevokedToken>,
     private readonly securityObservability: SecurityObservabilityService,
+    private readonly requestContextService: RequestContextService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -57,13 +59,23 @@ export class JwtAuthGuard implements CanActivate {
       const decoded = this.jwtService.verify(token);
 
       const isValidRole = decoded?.role === UserRole.ADMIN || decoded?.role === UserRole.RESIDENT;
-      if (!decoded || !decoded.sub || !decoded.name || !decoded.exp || !isValidRole) {
+      const isValidOrganizationId = typeof decoded?.organizationId === 'string'
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decoded.organizationId);
+
+      if (!decoded || !decoded.sub || !decoded.name || !decoded.exp || !isValidRole || !isValidOrganizationId) {
         this.logger.error('Invalid token payload');
         this.securityObservability.recordAuthFailure('invalid_token_payload', request.url);
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      request.user = { id: decoded.sub, name: decoded.name, role: decoded.role, token };
+      this.requestContextService.setOrganizationId(decoded.organizationId);
+      request.user = {
+        id: decoded.sub,
+        name: decoded.name,
+        role: decoded.role,
+        organizationId: decoded.organizationId,
+        token,
+      };
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException && error.message === 'Invalid token payload') {

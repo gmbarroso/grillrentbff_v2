@@ -14,11 +14,12 @@ export class AuthService {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  generateToken(payload: { name: string; id: string; role: string }): string {
+  generateToken(payload: { name: string; id: string; role: string; organizationId: string }): string {
     const tokenPayload = {
       name: payload.name,
       sub: payload.id,
       role: payload.role,
+      organizationId: payload.organizationId,
     };
 
     const token = this.jwtService.sign(tokenPayload);

@@ -1,7 +1,9 @@
-import * as Joi from 'joi';
+import * as Joi from '@hapi/joi';
 import { UserRole } from '../entities/user.entity';
+import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 
 export class CreateUserDto {
+  organizationSlug!: string;
   name!: string;
   email!: string;
   password!: string;
@@ -11,6 +13,16 @@ export class CreateUserDto {
 }
 
 export const CreateUserSchema = Joi.object({
+  organizationSlug: Joi.string()
+    .trim()
+    .required()
+    .custom((value, helpers) => {
+      if (!normalizeSlug(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    }, 'organization slug normalization')
+    .messages({ 'any.invalid': 'organizationSlug must contain at least one alphanumeric character' }),
   name: Joi.string().required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),

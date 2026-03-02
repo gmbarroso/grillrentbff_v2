@@ -41,6 +41,10 @@ export class HttpServiceWrapper {
     if (this.internalServiceToken) {
       headers['x-internal-service-token'] = this.internalServiceToken;
     }
+    const organizationId = this.requestContextService.getOrganizationId();
+    if (organizationId) {
+      headers['x-organization-id'] = organizationId;
+    }
 
     return headers;
   }

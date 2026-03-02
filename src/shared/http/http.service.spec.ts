@@ -17,6 +17,7 @@ describe('HttpServiceWrapper', () => {
   };
   const requestContextService = {
     getRequestId: jest.fn(() => 'req-123'),
+    getOrganizationId: jest.fn(() => 'org-123'),
   };
 
   let service: HttpServiceWrapper;
@@ -37,6 +38,7 @@ describe('HttpServiceWrapper', () => {
       params: undefined,
       headers: {
         Authorization: 'Bearer jwt-token',
+        'x-organization-id': 'org-123',
         'x-internal-service-token': 'internal-secret',
         'x-request-id': 'req-123',
       },
@@ -53,6 +55,7 @@ describe('HttpServiceWrapper', () => {
     expect(httpService.get).toHaveBeenCalledWith('http://api.internal/bookings/availability/1', {
       params: { start: 'x' },
       headers: {
+        'x-organization-id': 'org-123',
         'x-internal-service-token': 'internal-secret',
         'x-request-id': 'req-123',
       },

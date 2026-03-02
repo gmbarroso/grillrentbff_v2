@@ -19,16 +19,9 @@ export class UserController {
   @Post('register')
   async register(@Body(new JoiValidationPipe(CreateUserSchema)) createUserDto: CreateUserDto) {
     this.logger.log(`Registering user: ${createUserDto.apartment}, block: ${createUserDto.block}`);
-    const userExists = await this.userService.findUserByApartmentAndBlock(
-      createUserDto.apartment,
-      createUserDto.block,
-    );
-    if (userExists) {
-      this.logger.error(`User already exists: ${createUserDto.apartment}, block: ${createUserDto.block}`);
-      throw new UnauthorizedException('User already exists');
-    }
+    const result = await this.userService.register(createUserDto);
     this.logger.log(`User registered successfully: ${createUserDto.apartment}, block: ${createUserDto.block}`);
-    return this.userService.register(createUserDto);
+    return result;
   }
 
   @Post('login')

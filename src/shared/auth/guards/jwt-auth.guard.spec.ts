@@ -16,6 +16,9 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     recordCsrfRejection: jest.fn(),
     recordRevocationDenial: jest.fn(),
   };
+  const requestContextService = {
+    setOrganizationId: jest.fn(),
+  };
 
   let guard: JwtAuthGuard;
 
@@ -46,11 +49,17 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    guard = new JwtAuthGuard(jwtService as any, revokedTokenRepository as any, securityObservability as any);
+    guard = new JwtAuthGuard(
+      jwtService as any,
+      revokedTokenRepository as any,
+      securityObservability as any,
+      requestContextService as any,
+    );
     jwtService.verify.mockReturnValue({
       sub: 'user-1',
       name: 'Test User',
       role: 'resident',
+      organizationId: '4f5a8d5b-6fd0-4da0-bf96-c2454c6f8c99',
       exp: Math.floor(Date.now() / 1000) + 3600,
     });
   });
@@ -116,6 +125,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       sub: 'user-1',
       name: 'Test User',
       role: 'super-admin',
+      organizationId: '4f5a8d5b-6fd0-4da0-bf96-c2454c6f8c99',
       exp: Math.floor(Date.now() / 1000) + 3600,
     });
 
