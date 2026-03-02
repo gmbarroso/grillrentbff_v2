@@ -20,10 +20,11 @@ export const CreateOrganizationSchema = Joi.object({
     .optional()
     .custom((value, helpers) => {
       if (value === undefined) return value;
-      if (!normalizeSlug(value)) {
+      const normalized = normalizeSlug(value);
+      if (!normalized) {
         return helpers.error('any.invalid');
       }
-      return value;
+      return normalized;
     }, 'organization slug normalization')
     .messages({ 'any.invalid': 'slug must contain at least one alphanumeric character' }),
   address: Joi.string().max(1000).allow('', null).optional(),

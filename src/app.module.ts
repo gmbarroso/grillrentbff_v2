@@ -7,6 +7,7 @@ import { RequestContextMiddleware } from './middleware/request-context.middlewar
 import { EdgeRateLimitMiddleware } from './middleware/edge-rate-limit.middleware';
 import { RequestContextModule } from './shared/request-context/request-context.module';
 import { SecurityModule } from './shared/security/security.module';
+import { SchemaReadinessService } from './shared/database/schema-readiness.service';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { SecurityModule } from './shared/security/security.module';
     SecurityModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [SchemaReadinessService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
