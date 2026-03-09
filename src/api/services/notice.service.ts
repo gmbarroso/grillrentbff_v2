@@ -27,6 +27,33 @@ export class NoticeService {
     }
   }
 
+  async getAllNoticesWithQuery(token: string, query: Record<string, unknown>) {
+    try {
+      return await this.httpService.get(this.apiUrl, query, token);
+    } catch (error) {
+      this.logger.error(`Error in getAllNoticesWithQuery: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getUnreadCount(token: string) {
+    try {
+      return await this.httpService.get(`${this.apiUrl}/unread-count`, undefined, token);
+    } catch (error) {
+      this.logger.error(`Error in getUnreadCount: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async markAsSeen(token: string) {
+    try {
+      return await this.httpService.post(`${this.apiUrl}/mark-seen`, {}, token);
+    } catch (error) {
+      this.logger.error(`Error in markAsSeen: ${error.message}`);
+      throw error;
+    }
+  }
+
   async updateNotice(id: string, body: any, token: string) {
     try {
       return await this.httpService.put(`${this.apiUrl}/${id}`, body, token);
