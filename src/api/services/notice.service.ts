@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpServiceWrapper } from '../../shared/http/http.service';
 import { WinstonLoggerService } from '../../shared/logger/winston-logger.service';
+import { CreateNoticeDto, NoticeDto } from '../dto/notice.dto';
 
 @Injectable()
 export class NoticeService {
@@ -9,7 +10,7 @@ export class NoticeService {
 
   constructor(private readonly httpService: HttpServiceWrapper) {}
 
-  async createNotice(body: any, token: string) {
+  async createNotice(body: CreateNoticeDto, token: string): Promise<NoticeDto> {
     try {
       return await this.httpService.post(this.apiUrl, body, token);
     } catch (error) {
@@ -18,7 +19,7 @@ export class NoticeService {
     }
   }
 
-  async getAllNotices(token: string) {
+  async getAllNotices(token: string): Promise<{ data: NoticeDto[]; total: number }> {
     try {
       return await this.httpService.get(this.apiUrl, undefined, token);
     } catch (error) {
@@ -27,7 +28,34 @@ export class NoticeService {
     }
   }
 
-  async updateNotice(id: string, body: any, token: string) {
+  async getAllNoticesWithQuery(token: string, query: Record<string, unknown>): Promise<{ data: NoticeDto[]; total: number }> {
+    try {
+      return await this.httpService.get(this.apiUrl, query, token);
+    } catch (error) {
+      this.logger.error(`Error in getAllNoticesWithQuery: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getUnreadCount(token: string) {
+    try {
+      return await this.httpService.get(`${this.apiUrl}/unread-count`, undefined, token);
+    } catch (error) {
+      this.logger.error(`Error in getUnreadCount: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async markAsSeen(token: string) {
+    try {
+      return await this.httpService.post(`${this.apiUrl}/mark-seen`, {}, token);
+    } catch (error) {
+      this.logger.error(`Error in markAsSeen: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async updateNotice(id: string, body: Partial<CreateNoticeDto>, token: string): Promise<NoticeDto> {
     try {
       return await this.httpService.put(`${this.apiUrl}/${id}`, body, token);
     } catch (error) {

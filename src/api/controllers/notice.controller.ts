@@ -1,6 +1,20 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Req, UseGuards, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Req,
+  UseGuards,
+  Logger,
+  UnauthorizedException,
+  Query,
+} from '@nestjs/common';
 import { NoticeService } from '../services/notice.service';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { CreateNoticeDto } from '../dto/notice.dto';
 
 @Controller('notices')
 export class NoticeController {
@@ -10,7 +24,7 @@ export class NoticeController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async createNotice(@Body() body: any, @Req() req: any) {
+  async createNotice(@Body() body: CreateNoticeDto, @Req() req: any) {
     this.logger.log('Received POST /notices request');
     const token = req.user?.token;
 
@@ -25,7 +39,7 @@ export class NoticeController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getAllNotices(@Req() req: any) {
+  async getAllNotices(@Req() req: any, @Query() query: Record<string, unknown>) {
     this.logger.log('Received GET /notices request');
     const token = req.user?.token;
 
@@ -35,7 +49,37 @@ export class NoticeController {
     }
 
     this.logger.log('Calling NoticeService to fetch all notices');
-    return this.noticeService.getAllNotices(token);
+    return this.noticeService.getAllNoticesWithQuery(token, query);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('unread-count')
+  async getUnreadCount(@Req() req: any) {
+    this.logger.log('Received GET /notices/unread-count request');
+    const token = req.user?.token;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    this.logger.log('Calling NoticeService to fetch unread count');
+    return this.noticeService.getUnreadCount(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mark-seen')
+  async markAsSeen(@Req() req: any) {
+    this.logger.log('Received POST /notices/mark-seen request');
+    const token = req.user?.token;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    this.logger.log('Calling NoticeService to mark notices as seen');
+    return this.noticeService.markAsSeen(token);
   }
 
   @UseGuards(JwtAuthGuard)
