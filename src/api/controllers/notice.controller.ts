@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { NoticeService } from '../services/notice.service';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { CreateNoticeDto } from '../dto/notice.dto';
 
 @Controller('notices')
 export class NoticeController {
@@ -23,7 +24,7 @@ export class NoticeController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async createNotice(@Body() body: any, @Req() req: any) {
+  async createNotice(@Body() body: CreateNoticeDto, @Req() req: any) {
     this.logger.log('Received POST /notices request');
     const token = req.user?.token;
 
