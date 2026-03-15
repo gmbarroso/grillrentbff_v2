@@ -18,6 +18,8 @@ import { OrganizationService } from './services/organization.service';
 import { OrganizationController } from './controllers/organization.controller';
 import { WhatsappSettingsController } from './controllers/whatsapp-settings.controller';
 import { WhatsappSettingsService } from './services/whatsapp-settings.service';
+import { MessageController } from './controllers/message.controller';
+import { MessageService } from './services/message.service';
 
 @Module({
   imports: [
@@ -33,11 +35,21 @@ import { WhatsappSettingsService } from './services/whatsapp-settings.service';
     UserController,
     ResourceController,
     NoticeController,
+    MessageController,
     BookingController,
     OrganizationController,
     WhatsappSettingsController,
   ],
-  providers: [UserService, AuthService, ResourceService, NoticeService, BookingService, OrganizationService, WhatsappSettingsService],
+  providers: [
+    UserService,
+    AuthService,
+    ResourceService,
+    NoticeService,
+    MessageService,
+    BookingService,
+    OrganizationService,
+    WhatsappSettingsService,
+  ],
   exports: [UserService, JwtModule],
 })
 export class UserModule {}
