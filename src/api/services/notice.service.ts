@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpServiceWrapper } from '../../shared/http/http.service';
 import { WinstonLoggerService } from '../../shared/logger/winston-logger.service';
-import { CreateNoticeDto, NoticeDto } from '../dto/notice.dto';
+import { CreateNoticeDto, NoticeDto, NoticeUnreadStateDto } from '../dto/notice.dto';
 
 @Injectable()
 export class NoticeService {
@@ -37,7 +37,7 @@ export class NoticeService {
     }
   }
 
-  async getUnreadCount(token: string) {
+  async getUnreadCount(token: string): Promise<NoticeUnreadStateDto> {
     try {
       return await this.httpService.get(`${this.apiUrl}/unread-count`, undefined, token);
     } catch (error) {
