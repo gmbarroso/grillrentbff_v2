@@ -15,6 +15,7 @@ import {
 import { NoticeService } from '../services/notice.service';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
 import { CreateNoticeDto } from '../dto/notice.dto';
+import { NoticeUnreadStateDto } from '../dto/notice.dto';
 
 @Controller('notices')
 export class NoticeController {
@@ -54,7 +55,7 @@ export class NoticeController {
 
   @UseGuards(JwtAuthGuard)
   @Get('unread-count')
-  async getUnreadCount(@Req() req: any) {
+  async getUnreadCount(@Req() req: any): Promise<NoticeUnreadStateDto> {
     this.logger.log('Received GET /notices/unread-count request');
     const token = req.user?.token;
 
