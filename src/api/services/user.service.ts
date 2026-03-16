@@ -118,6 +118,14 @@ export class UserService {
     return this.httpService.put('users/profile', updateData, token);
   }
 
+  async updateUser(userId: string, updateData: UpdateUserDto, token: string) {
+    this.logger.log('Entering UserService.updateUser');
+    this.logger.log(`User ID to update: ${userId}`);
+    this.logger.log('Redirecting PUT user update request to API');
+
+    return this.httpService.put(`users/${userId}`, updateData, token);
+  }
+
   async logout(token: string) {
     this.logger.log('Entering UserService.logout');
     const decoded = this.authService.decodeToken(token);

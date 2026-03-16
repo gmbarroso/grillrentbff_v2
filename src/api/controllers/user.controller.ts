@@ -88,6 +88,28 @@ export class UserController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Put(':id')
+  async updateUser(@Req() req: any, @Param('id') userId: string, @Body(new JoiValidationPipe(UpdateUserSchema)) updateData: UpdateUserDto) {
+    this.logger.log('Entering UserController.updateUser');
+
+    const token = req.user?.token;
+    const userRole = req.user?.role;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    if (userRole !== UserRole.ADMIN) {
+      this.logger.error('Only admins can update users');
+      throw new UnauthorizedException('You do not have permission to update users');
+    }
+
+    this.logger.log(`Calling UserService to update user with ID: ${userId}`);
+    return this.userService.updateUser(userId, updateData, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
   async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     this.logger.log('Entering UserController.logout');

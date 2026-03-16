@@ -27,6 +27,7 @@ describe('UserController', () => {
             getProfile: jest.fn(),
             getAllUsers: jest.fn(),
             updateProfile: jest.fn(),
+            updateUser: jest.fn(),
             logout: jest.fn(),
             deleteUser: jest.fn(),
           },
