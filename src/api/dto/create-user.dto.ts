@@ -5,7 +5,7 @@ import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 export class CreateUserDto {
   organizationSlug!: string;
   name!: string;
-  email!: string;
+  email?: string | null;
   password!: string;
   apartment!: string;
   block!: number;
@@ -24,7 +24,7 @@ export const CreateUserSchema = Joi.object({
     }, 'organization slug normalization')
     .messages({ 'any.invalid': 'organizationSlug must contain at least one alphanumeric character' }),
   name: Joi.string().required(),
-  email: Joi.string().email().required(),
+  email: Joi.string().trim().email().allow('', null).optional(),
   password: Joi.string().min(8).required(),
   apartment: Joi.string().required(),
   block: Joi.number().valid(1, 2).required(),

@@ -43,12 +43,17 @@ export class UserService {
   async register(createUserDto: CreateUserDto) {
     this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
     const organization = await this.resolveOrganizationBySlug(createUserDto.organizationSlug);
+    const normalizedEmail = createUserDto.email?.trim().toLowerCase() || null;
+    const duplicateWhere: Array<{ apartment: string; block: number; organizationId: string } | { email: string; organizationId: string }> = [
+      { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
+    ];
+
+    if (normalizedEmail) {
+      duplicateWhere.push({ email: normalizedEmail, organizationId: organization.id });
+    }
 
     const userExists = await this.userRepository.findOne({
-      where: [
-        { email: createUserDto.email, organizationId: organization.id },
-        { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
-      ],
+      where: duplicateWhere,
     });
     
     if (userExists) {
@@ -59,6 +64,7 @@ export class UserService {
     const hashedPassword = await this.authService.hashPassword(createUserDto.password);
     const newUser = this.userRepository.create({
       ...userPayload,
+      email: normalizedEmail,
       password: hashedPassword,
       organizationId: organization.id,
     });
