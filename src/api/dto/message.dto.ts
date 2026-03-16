@@ -71,6 +71,12 @@ export interface ContactEmailSettingsDto {
   fromEmail: string | null;
   replyToMode: ContactEmailReplyToMode;
   customReplyTo: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpSecure: boolean | null;
+  smtpUser: string | null;
+  smtpFrom: string | null;
+  hasSmtpPassword: boolean;
   canSendEmail: boolean;
   validationErrors: string[];
 }
@@ -82,4 +88,10 @@ export interface UpdateContactEmailSettingsDto {
   fromEmail?: string | null;
   replyToMode: ContactEmailReplyToMode;
   customReplyTo?: string | null;
+  smtpHost?: string | null;
+  smtpPort?: number | null;
+  smtpSecure?: boolean | null;
+  smtpUser?: string | null;
+  smtpFrom?: string | null;
+  smtpAppPassword?: string | null;
 }
