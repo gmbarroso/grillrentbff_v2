@@ -19,6 +19,9 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   const requestContextService = {
     setOrganizationId: jest.fn(),
   };
+  const httpService = {
+    get: jest.fn(),
+  };
 
   let guard: JwtAuthGuard;
 
@@ -54,6 +57,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       revokedTokenRepository as any,
       securityObservability as any,
       requestContextService as any,
+      httpService as any,
     );
     jwtService.verify.mockReturnValue({
       sub: 'user-1',
@@ -61,6 +65,14 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       role: 'resident',
       organizationId: '4f5a8d5b-6fd0-4da0-bf96-c2454c6f8c99',
       exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    httpService.get.mockResolvedValue({
+      onboarding: {
+        mustProvideEmail: false,
+        mustVerifyEmail: false,
+        mustChangePassword: false,
+        onboardingRequired: false,
+      },
     });
   });
 
@@ -118,6 +130,20 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith('invalid_or_expired_token', path);
     },
   );
+
+  it('denies resident restricted sessions on non-onboarding paths', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    httpService.get.mockResolvedValue({
+      onboarding: {
+        mustProvideEmail: true,
+        mustVerifyEmail: false,
+        mustChangePassword: true,
+        onboardingRequired: true,
+      },
+    });
+
+    await expect(guard.canActivate(createContext('/bookings'))).rejects.toThrow(ForbiddenException);
+  });
 
   it('rejects tokens with role outside canonical enum', async () => {
     revokedTokenRepository.findOne.mockResolvedValue(null);

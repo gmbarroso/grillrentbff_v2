@@ -15,6 +15,12 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
 import { RevokedToken } from '../entities/revoked-token.entity';
 import { OrganizationService } from './organization.service';
+import {
+  ChangeOnboardingPasswordDto,
+  OnboardingFlagsDto,
+  SetOnboardingEmailDto,
+  VerifyOnboardingEmailDto,
+} from '../dto/onboarding.dto';
 
 @Injectable()
 export class UserService {
@@ -98,16 +104,33 @@ export class UserService {
     const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id };
     const token = this.authService.generateToken(payload);
     const decoded = this.authService.decodeToken(token);
+    const onboarding = await this.resolveOnboardingFlags(token, user);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
-    return { message: 'User logged in successfully', token, access_token: token, exp: decoded?.exp };
+    return {
+      message: 'User logged in successfully',
+      token,
+      access_token: token,
+      exp: decoded?.exp,
+      ...onboarding,
+    };
   }
 
   async getProfile(token: string) {
     this.logger.log('Entering UserService.getProfile');
 
     this.logger.log('Redirecting GET profile request to API');
-    return this.httpService.get('users/profile', undefined, token);
+    const response = await this.httpService.get<{
+      message: string;
+      user: Record<string, unknown>;
+      onboarding?: OnboardingFlagsDto;
+    }>('users/profile', undefined, token);
+
+    const onboarding = response?.onboarding ?? this.defaultOnboardingFlags();
+    return {
+      ...response,
+      ...onboarding,
+    };
   }
 
   async getAllUsers(token: string) {
@@ -164,6 +187,18 @@ export class UserService {
     return this.httpService.delete(`users/${userId}`, token);
   }
 
+  async setOnboardingEmail(data: SetOnboardingEmailDto, token: string) {
+    return this.httpService.post('users/onboarding/email', data, token);
+  }
+
+  async verifyOnboardingEmail(data: VerifyOnboardingEmailDto, token: string) {
+    return this.httpService.post('users/onboarding/verify', data, token);
+  }
+
+  async changeOnboardingPassword(data: ChangeOnboardingPasswordDto, token: string) {
+    return this.httpService.post('users/onboarding/change-password', data, token);
+  }
+
   private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {
     try {
       return await this.organizationService.findBySlug(slug);
@@ -173,5 +208,39 @@ export class UserService {
       }
       throw error;
     }
+  }
+
+  private async resolveOnboardingFlags(token: string, fallbackUser: User): Promise<OnboardingFlagsDto> {
+    try {
+      const profileResponse = await this.httpService.get<{
+        onboarding?: OnboardingFlagsDto;
+      }>('users/profile', undefined, token);
+      return profileResponse?.onboarding ?? this.deriveOnboardingFlagsFromUser(fallbackUser);
+    } catch (error) {
+      this.logger.warn('Failed to fetch onboarding flags from API, using local fallback');
+      return this.deriveOnboardingFlagsFromUser(fallbackUser);
+    }
+  }
+
+  private deriveOnboardingFlagsFromUser(user: User): OnboardingFlagsDto {
+    const hasVerifiedActiveEmail = Boolean(user.email && user.emailVerifiedAt);
+    const mustProvideEmail = !user.email && !user.pendingEmail;
+    const mustVerifyEmail = !hasVerifiedActiveEmail && !mustProvideEmail;
+    const mustChangePassword = Boolean(user.mustChangePassword);
+    return {
+      mustProvideEmail,
+      mustVerifyEmail,
+      mustChangePassword,
+      onboardingRequired: !hasVerifiedActiveEmail || mustChangePassword,
+    };
+  }
+
+  private defaultOnboardingFlags(): OnboardingFlagsDto {
+    return {
+      mustProvideEmail: false,
+      mustVerifyEmail: false,
+      mustChangePassword: false,
+      onboardingRequired: false,
+    };
   }
 }

@@ -3,6 +3,7 @@ import { UserController } from './user.controller';
 import { UserService } from '../services/user.service';
 import { setAuthCookie, setCsrfCookie } from '../../shared/auth/auth-cookie.util';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { BadRequestException } from '@nestjs/common';
 
 jest.mock('../../shared/auth/auth-cookie.util', () => ({
   setAuthCookie: jest.fn(),
@@ -30,6 +31,9 @@ describe('UserController', () => {
             updateUser: jest.fn(),
             logout: jest.fn(),
             deleteUser: jest.fn(),
+            setOnboardingEmail: jest.fn(),
+            verifyOnboardingEmail: jest.fn(),
+            changeOnboardingPassword: jest.fn(),
           },
         },
       ],
@@ -64,5 +68,24 @@ describe('UserController', () => {
     expect(setAuthCookie).toHaveBeenCalledWith(res, 'jwt-token', expect.any(Number));
     expect(setCsrfCookie).toHaveBeenCalledWith(res, response.csrfToken);
     expect(service.login).toHaveBeenCalledWith(loginUserDto);
+  });
+
+  it('proxies onboarding email endpoint with authenticated token', async () => {
+    service.setOnboardingEmail.mockResolvedValue({ message: 'ok' } as any);
+    await expect(
+      controller.setOnboardingEmail(
+        { user: { token: 'jwt-token' } } as any,
+        { email: 'resident@example.com' },
+      ),
+    ).resolves.toEqual({ message: 'ok' });
+  });
+
+  it('rejects password change through generic profile update', async () => {
+    await expect(
+      controller.updateProfile(
+        { user: { token: 'jwt-token' } } as any,
+        { password: 'Newpass123' } as any,
+      ),
+    ).rejects.toThrow(BadRequestException);
   });
 });

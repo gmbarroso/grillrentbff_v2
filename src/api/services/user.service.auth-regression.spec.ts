@@ -75,6 +75,14 @@ describe('Phase 5 - BFF auth regression flow', () => {
 
   const httpService = {
     post: jest.fn(async () => ({ message: 'Logout successful' })),
+    get: jest.fn(async () => ({
+      onboarding: {
+        mustProvideEmail: false,
+        mustVerifyEmail: false,
+        mustChangePassword: false,
+        onboardingRequired: false,
+      },
+    })),
   };
 
   const jwtService = {
@@ -132,6 +140,7 @@ describe('Phase 5 - BFF auth regression flow', () => {
       revokedTokenRepository as any,
       securityObservability as any,
       requestContextService as any,
+      httpService as any,
     );
   });
 
@@ -148,6 +157,10 @@ describe('Phase 5 - BFF auth regression flow', () => {
       token: 'phase5-token-user-1',
       access_token: 'phase5-token-user-1',
       exp: nowSeconds + 3600,
+      mustProvideEmail: false,
+      mustVerifyEmail: false,
+      mustChangePassword: false,
+      onboardingRequired: false,
     });
 
     await expect(guard.canActivate(createContext(loginResult.access_token))).resolves.toBe(true);

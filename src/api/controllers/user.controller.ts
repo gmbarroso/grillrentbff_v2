@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res } from '@nestjs/common';
 import { CreateUserDto, CreateUserSchema } from '../dto/create-user.dto';
 import { LoginUserDto, LoginUserSchema } from '../dto/login-user.dto';
 import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
@@ -9,6 +9,14 @@ import { UserRole } from '../entities/user.entity';
 import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from '../../shared/auth/auth-cookie.util';
 import { Response } from 'express';
 import { randomBytes } from 'crypto';
+import {
+  ChangeOnboardingPasswordDto,
+  ChangeOnboardingPasswordSchema,
+  SetOnboardingEmailDto,
+  SetOnboardingEmailSchema,
+  VerifyOnboardingEmailDto,
+  VerifyOnboardingEmailSchema,
+} from '../dto/onboarding.dto';
 
 @Controller('users')
 export class UserController {
@@ -82,6 +90,9 @@ export class UserController {
       this.logger.error('Authorization token is missing in the request');
       throw new UnauthorizedException('Authorization token is missing');
     }
+    if (updateData.password !== undefined) {
+      throw new BadRequestException('Use onboarding password endpoint to change password');
+    }
 
     this.logger.log('Calling UserService to update user profile');
     return this.userService.updateProfile(updateData, token);
@@ -148,5 +159,44 @@ export class UserController {
 
     this.logger.log(`Calling UserService to delete user with ID: ${userId}`);
     return this.userService.deleteUser(userId, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('onboarding/email')
+  async setOnboardingEmail(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(SetOnboardingEmailSchema)) body: SetOnboardingEmailDto,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.setOnboardingEmail(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('onboarding/verify')
+  async verifyOnboardingEmail(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(VerifyOnboardingEmailSchema)) body: VerifyOnboardingEmailDto,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.verifyOnboardingEmail(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('onboarding/change-password')
+  async changeOnboardingPassword(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(ChangeOnboardingPasswordSchema)) body: ChangeOnboardingPasswordDto,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.changeOnboardingPassword(body, token);
   }
 }

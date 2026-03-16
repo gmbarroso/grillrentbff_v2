@@ -20,6 +20,7 @@ import { WhatsappSettingsController } from './controllers/whatsapp-settings.cont
 import { WhatsappSettingsService } from './services/whatsapp-settings.service';
 import { MessageController } from './controllers/message.controller';
 import { MessageService } from './services/message.service';
+import { JwtAuthGuard } from '../shared/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { MessageService } from './services/message.service';
     BookingService,
     OrganizationService,
     WhatsappSettingsService,
+    JwtAuthGuard,
   ],
   exports: [UserService, JwtModule],
 })

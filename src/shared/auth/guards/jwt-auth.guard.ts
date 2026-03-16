@@ -7,11 +7,19 @@ import { UserRole } from '../../../api/entities/user.entity';
 import { getAuthTokenFromCookieHeader, getCsrfTokenFromCookieHeader } from '../auth-cookie.util';
 import { SecurityObservabilityService } from '../../security/security-observability.service';
 import { RequestContextService } from '../../request-context/request-context.service';
+import { HttpServiceWrapper } from '../../http/http.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
   private static readonly CSRF_HEADER = 'x-csrf-token';
+  private static readonly ONBOARDING_ALLOWED_PATHS = new Set([
+    '/users/profile',
+    '/users/logout',
+    '/users/onboarding/email',
+    '/users/onboarding/verify',
+    '/users/onboarding/change-password',
+  ]);
 
   constructor(
     private readonly jwtService: JwtService,
@@ -19,6 +27,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly revokedTokenRepository: Repository<RevokedToken>,
     private readonly securityObservability: SecurityObservabilityService,
     private readonly requestContextService: RequestContextService,
+    private readonly httpService: HttpServiceWrapper,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -69,15 +78,30 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       this.requestContextService.setOrganizationId(decoded.organizationId);
+      const onboarding = await this.resolveOnboardingFlags(token, decoded.role);
+      const requestPath = this.normalizeRequestPath(request.url);
+      if (
+        decoded.role === UserRole.RESIDENT
+        && onboarding.onboardingRequired
+        && !JwtAuthGuard.ONBOARDING_ALLOWED_PATHS.has(requestPath)
+      ) {
+        this.logger.warn(`Blocked restricted session path: ${requestPath}`);
+        throw new ForbiddenException('Complete onboarding before accessing this route');
+      }
+
       request.user = {
         id: decoded.sub,
         name: decoded.name,
         role: decoded.role,
         organizationId: decoded.organizationId,
         token,
+        ...onboarding,
       };
       return true;
     } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
       if (error instanceof UnauthorizedException && error.message === 'Invalid token payload') {
         throw error;
       }
@@ -85,5 +109,46 @@ export class JwtAuthGuard implements CanActivate {
       this.securityObservability.recordAuthFailure('invalid_or_expired_token', request.url);
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  private normalizeRequestPath(url: string): string {
+    const [path] = (url || '').split('?');
+    return path || '/';
+  }
+
+  private async resolveOnboardingFlags(
+    token: string,
+    role: UserRole,
+  ): Promise<{
+    mustProvideEmail: boolean;
+    mustVerifyEmail: boolean;
+    mustChangePassword: boolean;
+    onboardingRequired: boolean;
+  }> {
+    if (role !== UserRole.RESIDENT) {
+      return {
+        mustProvideEmail: false,
+        mustVerifyEmail: false,
+        mustChangePassword: false,
+        onboardingRequired: false,
+      };
+    }
+
+    const profile = await this.httpService.get<{
+      onboarding?: {
+        mustProvideEmail?: boolean;
+        mustVerifyEmail?: boolean;
+        mustChangePassword?: boolean;
+        onboardingRequired?: boolean;
+      };
+    }>('users/profile', undefined, token);
+
+    const onboarding = profile?.onboarding;
+    return {
+      mustProvideEmail: Boolean(onboarding?.mustProvideEmail),
+      mustVerifyEmail: Boolean(onboarding?.mustVerifyEmail),
+      mustChangePassword: Boolean(onboarding?.mustChangePassword),
+      onboardingRequired: Boolean(onboarding?.onboardingRequired),
+    };
   }
 }
