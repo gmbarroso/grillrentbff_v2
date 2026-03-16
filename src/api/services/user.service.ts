@@ -67,6 +67,7 @@ export class UserService {
       email: normalizedEmail,
       password: hashedPassword,
       organizationId: organization.id,
+      mustChangePassword: true,
     });
 
     await this.userRepository.save(newUser);
