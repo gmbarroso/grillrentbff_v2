@@ -1,16 +1,34 @@
-import { Body, Controller, ForbiddenException, Get, Logger, Param, Post, Put, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Put,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
 import { UserRole } from '../entities/user.entity';
 import { WhatsappSettingsService } from '../services/whatsapp-settings.service';
 import {
+  TestWhatsappConnectionSchema,
   TestWhatsappConnectionDto,
+  UpdateWhatsappSettingsSchema,
   UpdateWhatsappSettingsDto,
+  UpsertWhatsappGroupBindingSchema,
   UpsertWhatsappGroupBindingDto,
 } from '../dto/whatsapp-settings.dto';
 
 @Controller('whatsapp/settings')
 export class WhatsappSettingsController {
   private readonly logger = new Logger(WhatsappSettingsController.name);
+  private static readonly FEATURE_PARAM_PATTERN = /^[A-Za-z0-9-]+$/;
 
   constructor(private readonly whatsappSettingsService: WhatsappSettingsService) {}
 
@@ -32,7 +50,10 @@ export class WhatsappSettingsController {
 
   @UseGuards(JwtAuthGuard)
   @Put()
-  async updateSettings(@Body() body: UpdateWhatsappSettingsDto, @Req() req: any) {
+  async updateSettings(
+    @Body(new JoiValidationPipe(UpdateWhatsappSettingsSchema)) body: UpdateWhatsappSettingsDto,
+    @Req() req: any,
+  ) {
     this.logger.log('Received PUT /whatsapp/settings request');
     const token = this.ensureAdminAndGetToken(req);
     return this.whatsappSettingsService.updateSettings(body, token);
@@ -40,7 +61,10 @@ export class WhatsappSettingsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('test-connection')
-  async testConnection(@Body() body: TestWhatsappConnectionDto, @Req() req: any) {
+  async testConnection(
+    @Body(new JoiValidationPipe(TestWhatsappConnectionSchema)) body: TestWhatsappConnectionDto,
+    @Req() req: any,
+  ) {
     this.logger.log('Received POST /whatsapp/settings/test-connection request');
     const token = this.ensureAdminAndGetToken(req);
     return this.whatsappSettingsService.testConnection(body, token);
@@ -64,10 +88,20 @@ export class WhatsappSettingsController {
 
   @UseGuards(JwtAuthGuard)
   @Put('bindings/:feature')
-  async upsertBinding(@Param('feature') feature: string, @Body() body: UpsertWhatsappGroupBindingDto, @Req() req: any) {
+  async upsertBinding(
+    @Param('feature') feature: string,
+    @Body(new JoiValidationPipe(UpsertWhatsappGroupBindingSchema)) body: UpsertWhatsappGroupBindingDto,
+    @Req() req: any,
+  ) {
+    const normalizedFeature = feature.trim().toLowerCase();
+    if (!WhatsappSettingsController.FEATURE_PARAM_PATTERN.test(normalizedFeature)) {
+      this.logger.warn(`Received invalid feature parameter in PUT /whatsapp/settings/bindings/${feature} request`);
+      throw new BadRequestException('Invalid feature parameter');
+    }
+
     this.logger.log(`Received PUT /whatsapp/settings/bindings/${feature} request`);
     const token = this.ensureAdminAndGetToken(req);
-    return this.whatsappSettingsService.upsertBinding(feature, body, token);
+    return this.whatsappSettingsService.upsertBinding(normalizedFeature, body, token);
   }
 
   private ensureAdminAndGetToken(req: any): string {

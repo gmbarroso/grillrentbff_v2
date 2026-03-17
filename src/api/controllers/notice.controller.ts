@@ -14,8 +14,7 @@ import {
 } from '@nestjs/common';
 import { NoticeService } from '../services/notice.service';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
-import { CreateNoticeDto } from '../dto/notice.dto';
-import { NoticeUnreadStateDto } from '../dto/notice.dto';
+import { CreateNoticeDto, NoticeUnreadStateDto } from '../dto/notice.dto';
 
 @Controller('notices')
 export class NoticeController {
