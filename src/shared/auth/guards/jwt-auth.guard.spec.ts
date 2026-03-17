@@ -1,7 +1,7 @@
 import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-const BFF_PROTECTED_PATHS = ['/users/profile', '/users', '/resources', '/bookings', '/notices', '/messages'];
+const BFF_PROTECTED_PATHS = ['/users/profile', '/users', '/resources', '/bookings', '/bookeddates', '/notices', '/messages'];
 
 describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   const token = 'phase2-token';

@@ -92,6 +92,7 @@ src/
 - **POST** `/bookings`: Create a booking.
 - **GET** `/bookings/user/:userId`: List bookings for a user.
 - **GET** `/bookings`: List all bookings.
+- **GET** `/bookeddates`: List all bookings (alias used by `/admin/reservas`).
 - **DELETE** `/bookings/:id`: Delete a booking.
 - **GET** `/bookings/availability/:resourceId`: Check availability.
 - **GET** `/bookings/reserved-times`: Get reserved times.
