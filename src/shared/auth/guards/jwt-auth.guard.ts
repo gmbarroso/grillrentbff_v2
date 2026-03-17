@@ -22,6 +22,7 @@ export class JwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
   private static readonly ONBOARDING_CACHE_TTL_MS = 60_000;
   private static readonly ONBOARDING_CACHE_MAX_SIZE = 1000;
+  private static readonly ONBOARDING_CACHE_CLEANUP_INTERVAL_MS = 30_000;
   private static readonly CSRF_HEADER = 'x-csrf-token';
   private static readonly ONBOARDING_ALLOWED_PATHS = new Set([
     '/users/profile',
@@ -42,6 +43,7 @@ export class JwtAuthGuard implements CanActivate {
       expiresAt: number;
     }
   >();
+  private lastOnboardingCacheCleanupAt = 0;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -100,7 +102,7 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       this.requestContextService.setOrganizationId(decoded.organizationId);
-      const onboarding = await this.resolveOnboardingFlags(token, decoded.role);
+      const onboarding = await this.resolveOnboardingFlags(token, decoded.role, decoded);
       const requestPath = this.normalizeRequestPath(request.url);
       if (
         decoded.role === UserRole.RESIDENT
@@ -144,6 +146,14 @@ export class JwtAuthGuard implements CanActivate {
   private async resolveOnboardingFlags(
     token: string,
     role: UserRole,
+    decodedPayload?: {
+      onboarding?: {
+        mustProvideEmail?: boolean;
+        mustVerifyEmail?: boolean;
+        mustChangePassword?: boolean;
+        onboardingRequired?: boolean;
+      };
+    },
   ): Promise<{
     mustProvideEmail: boolean;
     mustVerifyEmail: boolean;
@@ -160,10 +170,20 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const now = Date.now();
-    this.cleanupOnboardingCache(now);
+    this.maybeCleanupOnboardingCache(now);
     const cached = this.onboardingCache.get(token);
     if (cached && cached.expiresAt > now) {
       return cached.flags;
+    }
+
+    const tokenFlags = this.tryResolveOnboardingFlagsFromToken(decodedPayload);
+    if (tokenFlags) {
+      this.onboardingCache.set(token, {
+        flags: tokenFlags,
+        expiresAt: now + JwtAuthGuard.ONBOARDING_CACHE_TTL_MS,
+      });
+      this.enforceOnboardingCacheSizeLimit(now);
+      return tokenFlags;
     }
 
     let profile: {
@@ -205,16 +225,21 @@ export class JwtAuthGuard implements CanActivate {
     return flags;
   }
 
-  private cleanupOnboardingCache(now: number): void {
+  private maybeCleanupOnboardingCache(now: number, force = false): void {
+    if (!force && now - this.lastOnboardingCacheCleanupAt < JwtAuthGuard.ONBOARDING_CACHE_CLEANUP_INTERVAL_MS) {
+      return;
+    }
+
     for (const [key, entry] of this.onboardingCache.entries()) {
       if (entry.expiresAt <= now) {
         this.onboardingCache.delete(key);
       }
     }
+    this.lastOnboardingCacheCleanupAt = now;
   }
 
   private enforceOnboardingCacheSizeLimit(now: number): void {
-    this.cleanupOnboardingCache(now);
+    this.maybeCleanupOnboardingCache(now, true);
     if (this.onboardingCache.size <= JwtAuthGuard.ONBOARDING_CACHE_MAX_SIZE) {
       return;
     }
@@ -227,5 +252,31 @@ export class JwtAuthGuard implements CanActivate {
       }
       this.onboardingCache.delete(next.value);
     }
+  }
+
+  private tryResolveOnboardingFlagsFromToken(decodedPayload?: {
+    onboarding?: {
+      mustProvideEmail?: boolean;
+      mustVerifyEmail?: boolean;
+      mustChangePassword?: boolean;
+      onboardingRequired?: boolean;
+    };
+  }): {
+    mustProvideEmail: boolean;
+    mustVerifyEmail: boolean;
+    mustChangePassword: boolean;
+    onboardingRequired: boolean;
+  } | null {
+    const onboarding = decodedPayload?.onboarding;
+    if (!onboarding || typeof onboarding !== 'object') {
+      return null;
+    }
+
+    return {
+      mustProvideEmail: Boolean(onboarding.mustProvideEmail),
+      mustVerifyEmail: Boolean(onboarding.mustVerifyEmail),
+      mustChangePassword: Boolean(onboarding.mustChangePassword),
+      onboardingRequired: Boolean(onboarding.onboardingRequired),
+    };
   }
 }

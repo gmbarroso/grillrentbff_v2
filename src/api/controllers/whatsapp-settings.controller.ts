@@ -95,11 +95,11 @@ export class WhatsappSettingsController {
   ) {
     const normalizedFeature = feature.trim().toLowerCase();
     if (!WhatsappSettingsController.FEATURE_PARAM_PATTERN.test(normalizedFeature)) {
-      this.logger.warn(`Received invalid feature parameter in PUT /whatsapp/settings/bindings/${feature} request`);
+      this.logger.warn('Received invalid feature parameter in PUT /whatsapp/settings/bindings request');
       throw new BadRequestException('Invalid feature parameter');
     }
 
-    this.logger.log(`Received PUT /whatsapp/settings/bindings/${feature} request`);
+    this.logger.log(`Received PUT /whatsapp/settings/bindings/${normalizedFeature} request`);
     const token = this.ensureAdminAndGetToken(req);
     return this.whatsappSettingsService.upsertBinding(normalizedFeature, body, token);
   }

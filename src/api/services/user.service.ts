@@ -103,10 +103,10 @@ export class UserService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id };
+    const onboarding = this.resolveOnboardingFlags(user);
+    const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id, onboarding };
     const token = this.authService.generateToken(payload);
     const decoded = this.authService.decodeToken(token);
-    const onboarding = this.resolveOnboardingFlags(user);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
     return {

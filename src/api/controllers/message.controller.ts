@@ -6,6 +6,7 @@ import {
   Get,
   Logger,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -79,7 +80,7 @@ export class MessageController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/mark-read')
-  async markAsRead(@Param('id') id: string, @Req() req: any) {
+  async markAsRead(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
     this.logger.log(`Received POST /messages/${id}/mark-read request`);
     const token = req.user?.token;
 
@@ -93,7 +94,7 @@ export class MessageController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/replies')
-  async replyAsAdmin(@Param('id') id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
+  async replyAsAdmin(@Param('id', new ParseUUIDPipe()) id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
     this.logger.log(`Received POST /messages/${id}/replies request`);
     const token = req.user?.token;
 
@@ -107,7 +108,7 @@ export class MessageController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async deleteMessage(@Param('id') id: string, @Req() req: any) {
+  async deleteMessage(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
     this.logger.log(`Received DELETE /messages/${id} request`);
     const token = this.ensureAdminAndGetToken(req);
     return this.messageService.deleteMessage(id, token);

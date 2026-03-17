@@ -31,6 +31,7 @@ export interface NoticeDto {
 }
 
 export interface NoticeUnreadStateDto {
+  unreadCount: number;
   hasUnread: boolean;
   lastSeenNoticesAt: string | null;
 }
