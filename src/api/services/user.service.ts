@@ -12,10 +12,12 @@ import { HttpServiceWrapper } from '../../shared/http/http.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { ForgotPasswordConfirmDto, ForgotPasswordRequestDto } from '../dto/forgot-password.dto';
 import { User } from '../entities/user.entity';
 import { RevokedToken } from '../entities/revoked-token.entity';
 import { OrganizationService } from './organization.service';
 import {
+  ChangePasswordDto,
   ChangeOnboardingPasswordDto,
   OnboardingFlagsDto,
   SetOnboardingEmailDto,
@@ -197,6 +199,18 @@ export class UserService {
 
   async changeOnboardingPassword(data: ChangeOnboardingPasswordDto, token: string) {
     return this.httpService.post('users/onboarding/change-password', data, token);
+  }
+
+  async changePassword(data: ChangePasswordDto, token: string) {
+    return this.httpService.put('users/change-password', data, token);
+  }
+
+  async requestForgotPassword(data: ForgotPasswordRequestDto) {
+    return this.httpService.post('users/forgot-password/request', data);
+  }
+
+  async confirmForgotPassword(data: ForgotPasswordConfirmDto) {
+    return this.httpService.post('users/forgot-password/confirm', data);
   }
 
   private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {

@@ -21,5 +21,5 @@ export const LoginUserSchema = Joi.object({
     .messages({ 'any.invalid': 'organizationSlug must contain at least one alphanumeric character' }),
   apartment: Joi.string().required(),
   block: Joi.number().valid(1, 2).required(),
-  password: Joi.string().min(8).max(12).required(),
+  password: Joi.string().min(1).max(100).required(),
 });

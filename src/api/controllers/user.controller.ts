@@ -10,6 +10,14 @@ import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from '
 import { Response } from 'express';
 import { randomBytes } from 'crypto';
 import {
+  ForgotPasswordConfirmDto,
+  ForgotPasswordConfirmSchema,
+  ForgotPasswordRequestDto,
+  ForgotPasswordRequestSchema,
+} from '../dto/forgot-password.dto';
+import {
+  ChangePasswordDto,
+  ChangePasswordSchema,
   ChangeOnboardingPasswordDto,
   ChangeOnboardingPasswordSchema,
   SetOnboardingEmailDto,
@@ -46,6 +54,20 @@ export class UserController {
       ...result,
       csrfToken,
     };
+  }
+
+  @Post('forgot-password/request')
+  async requestForgotPassword(
+    @Body(new JoiValidationPipe(ForgotPasswordRequestSchema)) body: ForgotPasswordRequestDto,
+  ) {
+    return this.userService.requestForgotPassword(body);
+  }
+
+  @Post('forgot-password/confirm')
+  async confirmForgotPassword(
+    @Body(new JoiValidationPipe(ForgotPasswordConfirmSchema)) body: ForgotPasswordConfirmDto,
+  ) {
+    return this.userService.confirmForgotPassword(body);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -198,5 +220,18 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
     return this.userService.changeOnboardingPassword(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('change-password')
+  async changePassword(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(ChangePasswordSchema)) body: ChangePasswordDto,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.changePassword(body, token);
   }
 }
