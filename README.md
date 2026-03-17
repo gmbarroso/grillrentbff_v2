@@ -10,6 +10,12 @@ GrillRent BFF is a Backend-for-Frontend (BFF) built with [NestJS](https://nestjs
   - Management of resources like grills, courts, etc.
 - **Notices**:
   - Creation, update, and deletion of notices.
+- **Onboarding**:
+  - Resident onboarding endpoints and restricted-session guard enforcement.
+- **Messages**:
+  - Contact submit/admin inbox proxy endpoints.
+- **WhatsApp Settings**:
+  - Organization-scoped provider settings and group bindings.
 - **Bookings**:
   - Creation, retrieval, deletion, and availability checks for bookings.
 
@@ -75,6 +81,9 @@ src/
 - **POST** `/users/register`: Register a new user.
 - **POST** `/users/login`: Log in.
 - **GET** `/users/profile`: Get user profile.
+- **POST** `/users/onboarding/email`: Set onboarding email.
+- **POST** `/users/onboarding/verify`: Verify onboarding token.
+- **POST** `/users/onboarding/change-password`: Change temporary password.
 
 ### Resources
 - **POST** `/resources`: Create a resource.
@@ -85,8 +94,25 @@ src/
 ### Notices
 - **POST** `/notices`: Create a notice.
 - **GET** `/notices`: List all notices.
+- **GET** `/notices/unread-count`: Get unread state (`unreadCount`, `hasUnread`, `lastSeenNoticesAt`).
+- **POST** `/notices/mark-seen`: Mark notices as seen.
 - **PUT** `/notices/:id`: Update a notice.
 - **DELETE** `/notices/:id`: Delete a notice.
+
+### Messages
+- **POST** `/messages/contact`: Submit contact message.
+- **GET** `/messages/admin`: List messages for admin inbox.
+- **GET** `/messages/unread-count`: Get admin unread state.
+- **POST** `/messages/:id/mark-read`: Mark a message as read.
+- **POST** `/messages/:id/replies`: Reply to a message.
+
+### WhatsApp Settings
+- **GET** `/whatsapp/settings`: Read organization WhatsApp settings.
+- **PUT** `/whatsapp/settings`: Update provider settings (`apiKey: ""` clears stored key).
+- **POST** `/whatsapp/settings/test-connection`: Test provider connection.
+- **GET** `/whatsapp/settings/groups`: Fetch provider groups.
+- **GET** `/whatsapp/settings/bindings`: List feature bindings.
+- **PUT** `/whatsapp/settings/bindings/:feature`: Upsert feature binding.
 
 ### Bookings
 - **POST** `/bookings`: Create a booking.

@@ -1,4 +1,4 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const BFF_PROTECTED_PATHS = ['/users/profile', '/users', '/resources', '/bookings', '/bookeddates', '/notices', '/messages'];
@@ -160,5 +160,12 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       'invalid_token_payload',
       '/users/profile',
     );
+  });
+
+  it('returns service unavailable when onboarding profile lookup fails', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    httpService.get.mockRejectedValue(new Error('upstream timeout'));
+
+    await expect(guard.canActivate(createContext('/users/profile'))).rejects.toThrow(ServiceUnavailableException);
   });
 });

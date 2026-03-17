@@ -1,4 +1,12 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  Logger,
+  ForbiddenException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +21,7 @@ import { HttpServiceWrapper } from '../../http/http.service';
 export class JwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
   private static readonly ONBOARDING_CACHE_TTL_MS = 60_000;
+  private static readonly ONBOARDING_CACHE_MAX_SIZE = 1000;
   private static readonly CSRF_HEADER = 'x-csrf-token';
   private static readonly ONBOARDING_ALLOWED_PATHS = new Set([
     '/users/profile',
@@ -115,6 +124,9 @@ export class JwtAuthGuard implements CanActivate {
       if (error instanceof ForbiddenException) {
         throw error;
       }
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
       if (error instanceof UnauthorizedException && error.message === 'Invalid token payload') {
         throw error;
       }
@@ -148,19 +160,33 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const now = Date.now();
+    this.cleanupOnboardingCache(now);
     const cached = this.onboardingCache.get(token);
     if (cached && cached.expiresAt > now) {
       return cached.flags;
     }
 
-    const profile = await this.httpService.get<{
+    let profile: {
       onboarding?: {
         mustProvideEmail?: boolean;
         mustVerifyEmail?: boolean;
         mustChangePassword?: boolean;
         onboardingRequired?: boolean;
       };
-    }>('users/profile', undefined, token);
+    } | null = null;
+    try {
+      profile = await this.httpService.get<{
+        onboarding?: {
+          mustProvideEmail?: boolean;
+          mustVerifyEmail?: boolean;
+          mustChangePassword?: boolean;
+          onboardingRequired?: boolean;
+        };
+      }>('users/profile', undefined, token);
+    } catch (error) {
+      this.logger.warn(`Unable to resolve onboarding flags from profile service: ${(error as Error).message}`);
+      throw new ServiceUnavailableException('Unable to resolve onboarding status right now');
+    }
 
     const onboarding = profile?.onboarding;
     const flags = {
@@ -174,7 +200,32 @@ export class JwtAuthGuard implements CanActivate {
       flags,
       expiresAt: now + JwtAuthGuard.ONBOARDING_CACHE_TTL_MS,
     });
+    this.enforceOnboardingCacheSizeLimit(now);
 
     return flags;
+  }
+
+  private cleanupOnboardingCache(now: number): void {
+    for (const [key, entry] of this.onboardingCache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.onboardingCache.delete(key);
+      }
+    }
+  }
+
+  private enforceOnboardingCacheSizeLimit(now: number): void {
+    this.cleanupOnboardingCache(now);
+    if (this.onboardingCache.size <= JwtAuthGuard.ONBOARDING_CACHE_MAX_SIZE) {
+      return;
+    }
+
+    const keysIterator = this.onboardingCache.keys();
+    while (this.onboardingCache.size > JwtAuthGuard.ONBOARDING_CACHE_MAX_SIZE) {
+      const next = keysIterator.next();
+      if (next.done) {
+        break;
+      }
+      this.onboardingCache.delete(next.value);
+    }
   }
 }
