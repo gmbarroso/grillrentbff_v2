@@ -16,6 +16,11 @@ import { BookingService } from './services/booking.service';
 import { resolveJwtSecret } from '../shared/auth/jwt-secret.policy';
 import { OrganizationService } from './services/organization.service';
 import { OrganizationController } from './controllers/organization.controller';
+import { WhatsappSettingsController } from './controllers/whatsapp-settings.controller';
+import { WhatsappSettingsService } from './services/whatsapp-settings.service';
+import { MessageController } from './controllers/message.controller';
+import { MessageService } from './services/message.service';
+import { JwtAuthGuard } from '../shared/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -27,8 +32,26 @@ import { OrganizationController } from './controllers/organization.controller';
       signOptions: { expiresIn: '60m' },
     }),
   ],
-  controllers: [UserController, ResourceController, NoticeController, BookingController, OrganizationController],
-  providers: [UserService, AuthService, ResourceService, NoticeService, BookingService, OrganizationService],
+  controllers: [
+    UserController,
+    ResourceController,
+    NoticeController,
+    MessageController,
+    BookingController,
+    OrganizationController,
+    WhatsappSettingsController,
+  ],
+  providers: [
+    UserService,
+    AuthService,
+    ResourceService,
+    NoticeService,
+    MessageService,
+    BookingService,
+    OrganizationService,
+    WhatsappSettingsService,
+    JwtAuthGuard,
+  ],
   exports: [UserService, JwtModule],
 })
 export class UserModule {}

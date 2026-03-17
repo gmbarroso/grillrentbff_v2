@@ -2,7 +2,7 @@ import { Controller, Post, Get, Delete, Body, Param, Query, Req, UseGuards, Logg
 import { BookingService } from '../services/booking.service';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
 
-@Controller('bookings')
+@Controller(['bookings', 'bookeddates'])
 export class BookingController {
   private readonly logger = new Logger(BookingController.name);
 

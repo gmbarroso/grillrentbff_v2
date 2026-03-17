@@ -29,3 +29,9 @@ export interface NoticeDto {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface NoticeUnreadStateDto {
+  unreadCount: number;
+  hasUnread: boolean;
+  lastSeenNoticesAt: string | null;
+}

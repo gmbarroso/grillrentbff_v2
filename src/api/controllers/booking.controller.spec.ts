@@ -48,4 +48,34 @@ describe('BFF BookingController', () => {
       ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('forwards getAllBookings query with token', async () => {
+    const payload = { data: [], total: 0, page: 1, lastPage: 1 };
+    bookingService.getAllBookings.mockResolvedValue(payload);
+
+    await expect(
+      controller.getAllBookings(
+        { user: { token: 'jwt-token' } },
+        { page: 2, limit: 10, sort: 'startTime', order: 'ASC' },
+        undefined,
+        undefined,
+      ),
+    ).resolves.toEqual(payload);
+
+    expect(bookingService.getAllBookings).toHaveBeenCalledWith(
+      { page: 2, limit: 10, sort: 'startTime', order: 'ASC', startDate: undefined, endDate: undefined },
+      'jwt-token',
+    );
+  });
+
+  it('throws UnauthorizedException when getAllBookings token is missing', async () => {
+    await expect(
+      controller.getAllBookings(
+        { user: {} },
+        { page: 1, limit: 10 },
+        undefined,
+        undefined,
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });

@@ -1,7 +1,7 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-const BFF_PROTECTED_PATHS = ['/users/profile', '/users', '/resources', '/bookings', '/notices'];
+const BFF_PROTECTED_PATHS = ['/users/profile', '/users', '/resources', '/bookings', '/bookeddates', '/notices', '/messages'];
 
 describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   const token = 'phase2-token';
@@ -18,6 +18,9 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
   };
   const requestContextService = {
     setOrganizationId: jest.fn(),
+  };
+  const httpService = {
+    get: jest.fn(),
   };
 
   let guard: JwtAuthGuard;
@@ -54,6 +57,7 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       revokedTokenRepository as any,
       securityObservability as any,
       requestContextService as any,
+      httpService as any,
     );
     jwtService.verify.mockReturnValue({
       sub: 'user-1',
@@ -61,6 +65,14 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       role: 'resident',
       organizationId: '4f5a8d5b-6fd0-4da0-bf96-c2454c6f8c99',
       exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    httpService.get.mockResolvedValue({
+      onboarding: {
+        mustProvideEmail: false,
+        mustVerifyEmail: false,
+        mustChangePassword: false,
+        onboardingRequired: false,
+      },
     });
   });
 
@@ -119,6 +131,20 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     },
   );
 
+  it('denies resident restricted sessions on non-onboarding paths', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    httpService.get.mockResolvedValue({
+      onboarding: {
+        mustProvideEmail: true,
+        mustVerifyEmail: false,
+        mustChangePassword: true,
+        onboardingRequired: true,
+      },
+    });
+
+    await expect(guard.canActivate(createContext('/bookings'))).rejects.toThrow(ForbiddenException);
+  });
+
   it('rejects tokens with role outside canonical enum', async () => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
     jwtService.verify.mockReturnValue({
@@ -134,5 +160,12 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       'invalid_token_payload',
       '/users/profile',
     );
+  });
+
+  it('returns service unavailable when onboarding profile lookup fails', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    httpService.get.mockRejectedValue(new Error('upstream timeout'));
+
+    await expect(guard.canActivate(createContext('/users/profile'))).rejects.toThrow(ServiceUnavailableException);
   });
 });

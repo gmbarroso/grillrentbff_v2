@@ -12,9 +12,17 @@ import { HttpServiceWrapper } from '../../shared/http/http.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { ForgotPasswordConfirmDto, ForgotPasswordRequestDto } from '../dto/forgot-password.dto';
 import { User } from '../entities/user.entity';
 import { RevokedToken } from '../entities/revoked-token.entity';
 import { OrganizationService } from './organization.service';
+import {
+  ChangePasswordDto,
+  ChangeOnboardingPasswordDto,
+  OnboardingFlagsDto,
+  SetOnboardingEmailDto,
+  VerifyOnboardingEmailDto,
+} from '../dto/onboarding.dto';
 
 @Injectable()
 export class UserService {
@@ -43,12 +51,17 @@ export class UserService {
   async register(createUserDto: CreateUserDto) {
     this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
     const organization = await this.resolveOrganizationBySlug(createUserDto.organizationSlug);
+    const normalizedEmail = createUserDto.email?.trim().toLowerCase() || null;
+    const duplicateWhere: Array<{ apartment: string; block: number; organizationId: string } | { email: string; organizationId: string }> = [
+      { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
+    ];
+
+    if (normalizedEmail) {
+      duplicateWhere.push({ email: normalizedEmail, organizationId: organization.id });
+    }
 
     const userExists = await this.userRepository.findOne({
-      where: [
-        { email: createUserDto.email, organizationId: organization.id },
-        { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
-      ],
+      where: duplicateWhere,
     });
     
     if (userExists) {
@@ -59,8 +72,10 @@ export class UserService {
     const hashedPassword = await this.authService.hashPassword(createUserDto.password);
     const newUser = this.userRepository.create({
       ...userPayload,
+      email: normalizedEmail,
       password: hashedPassword,
       organizationId: organization.id,
+      mustChangePassword: true,
     });
 
     await this.userRepository.save(newUser);
@@ -88,19 +103,36 @@ export class UserService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id };
+    const onboarding = this.resolveOnboardingFlags(user);
+    const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id, onboarding };
     const token = this.authService.generateToken(payload);
     const decoded = this.authService.decodeToken(token);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
-    return { message: 'User logged in successfully', token, access_token: token, exp: decoded?.exp };
+    return {
+      message: 'User logged in successfully',
+      token,
+      access_token: token,
+      exp: decoded?.exp,
+      ...onboarding,
+    };
   }
 
   async getProfile(token: string) {
     this.logger.log('Entering UserService.getProfile');
 
     this.logger.log('Redirecting GET profile request to API');
-    return this.httpService.get('users/profile', undefined, token);
+    const response = await this.httpService.get<{
+      message: string;
+      user: Record<string, unknown>;
+      onboarding?: OnboardingFlagsDto;
+    }>('users/profile', undefined, token);
+
+    const onboarding = response?.onboarding ?? this.defaultOnboardingFlags();
+    return {
+      ...response,
+      onboarding,
+    };
   }
 
   async getAllUsers(token: string) {
@@ -116,6 +148,14 @@ export class UserService {
     this.logger.log('Redirecting PUT profile update request to API');
 
     return this.httpService.put('users/profile', updateData, token);
+  }
+
+  async updateUser(userId: string, updateData: UpdateUserDto, token: string) {
+    this.logger.log('Entering UserService.updateUser');
+    this.logger.log(`User ID to update: ${userId}`);
+    this.logger.log('Redirecting PUT user update request to API');
+
+    return this.httpService.put(`users/${userId}`, updateData, token);
   }
 
   async logout(token: string) {
@@ -149,6 +189,30 @@ export class UserService {
     return this.httpService.delete(`users/${userId}`, token);
   }
 
+  async setOnboardingEmail(data: SetOnboardingEmailDto, token: string) {
+    return this.httpService.post('users/onboarding/email', data, token);
+  }
+
+  async verifyOnboardingEmail(data: VerifyOnboardingEmailDto, token: string) {
+    return this.httpService.post('users/onboarding/verify', data, token);
+  }
+
+  async changeOnboardingPassword(data: ChangeOnboardingPasswordDto, token: string) {
+    return this.httpService.post('users/onboarding/change-password', data, token);
+  }
+
+  async changePassword(data: ChangePasswordDto, token: string) {
+    return this.httpService.put('users/change-password', data, token);
+  }
+
+  async requestForgotPassword(data: ForgotPasswordRequestDto) {
+    return this.httpService.post('users/forgot-password/request', data);
+  }
+
+  async confirmForgotPassword(data: ForgotPasswordConfirmDto) {
+    return this.httpService.post('users/forgot-password/confirm', data);
+  }
+
   private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {
     try {
       return await this.organizationService.findBySlug(slug);
@@ -158,5 +222,31 @@ export class UserService {
       }
       throw error;
     }
+  }
+
+  private resolveOnboardingFlags(fallbackUser: User): OnboardingFlagsDto {
+    return this.deriveOnboardingFlagsFromUser(fallbackUser);
+  }
+
+  private deriveOnboardingFlagsFromUser(user: User): OnboardingFlagsDto {
+    const hasVerifiedActiveEmail = Boolean(user.email && user.emailVerifiedAt);
+    const mustProvideEmail = !user.email && !user.pendingEmail;
+    const mustVerifyEmail = !hasVerifiedActiveEmail && !mustProvideEmail;
+    const mustChangePassword = Boolean(user.mustChangePassword);
+    return {
+      mustProvideEmail,
+      mustVerifyEmail,
+      mustChangePassword,
+      onboardingRequired: !hasVerifiedActiveEmail || mustChangePassword,
+    };
+  }
+
+  private defaultOnboardingFlags(): OnboardingFlagsDto {
+    return {
+      mustProvideEmail: false,
+      mustVerifyEmail: false,
+      mustChangePassword: false,
+      onboardingRequired: false,
+    };
   }
 }
