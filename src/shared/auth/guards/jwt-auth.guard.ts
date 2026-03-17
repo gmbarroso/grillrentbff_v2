@@ -12,6 +12,7 @@ import { HttpServiceWrapper } from '../../http/http.service';
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
+  private static readonly ONBOARDING_CACHE_TTL_MS = 60_000;
   private static readonly CSRF_HEADER = 'x-csrf-token';
   private static readonly ONBOARDING_ALLOWED_PATHS = new Set([
     '/users/profile',
@@ -20,6 +21,18 @@ export class JwtAuthGuard implements CanActivate {
     '/users/onboarding/verify',
     '/users/onboarding/change-password',
   ]);
+  private readonly onboardingCache = new Map<
+    string,
+    {
+      flags: {
+        mustProvideEmail: boolean;
+        mustVerifyEmail: boolean;
+        mustChangePassword: boolean;
+        onboardingRequired: boolean;
+      };
+      expiresAt: number;
+    }
+  >();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -134,6 +147,12 @@ export class JwtAuthGuard implements CanActivate {
       };
     }
 
+    const now = Date.now();
+    const cached = this.onboardingCache.get(token);
+    if (cached && cached.expiresAt > now) {
+      return cached.flags;
+    }
+
     const profile = await this.httpService.get<{
       onboarding?: {
         mustProvideEmail?: boolean;
@@ -144,11 +163,18 @@ export class JwtAuthGuard implements CanActivate {
     }>('users/profile', undefined, token);
 
     const onboarding = profile?.onboarding;
-    return {
+    const flags = {
       mustProvideEmail: Boolean(onboarding?.mustProvideEmail),
       mustVerifyEmail: Boolean(onboarding?.mustVerifyEmail),
       mustChangePassword: Boolean(onboarding?.mustChangePassword),
       onboardingRequired: Boolean(onboarding?.onboardingRequired),
     };
+
+    this.onboardingCache.set(token, {
+      flags,
+      expiresAt: now + JwtAuthGuard.ONBOARDING_CACHE_TTL_MS,
+    });
+
+    return flags;
   }
 }

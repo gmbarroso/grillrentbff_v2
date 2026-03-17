@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res, ForbiddenException } from '@nestjs/common';
 import { CreateUserDto, CreateUserSchema } from '../dto/create-user.dto';
 import { LoginUserDto, LoginUserSchema } from '../dto/login-user.dto';
 import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
@@ -121,7 +121,7 @@ export class UserController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Put(':id')
+  @Put(':id([0-9a-fA-F-]{36})')
   async updateUser(@Req() req: any, @Param('id') userId: string, @Body(new JoiValidationPipe(UpdateUserSchema)) updateData: UpdateUserDto) {
     this.logger.log('Entering UserController.updateUser');
 
@@ -135,7 +135,7 @@ export class UserController {
 
     if (userRole !== UserRole.ADMIN) {
       this.logger.error('Only admins can update users');
-      throw new UnauthorizedException('You do not have permission to update users');
+      throw new ForbiddenException('You do not have permission to update users');
     }
 
     this.logger.log(`Calling UserService to update user with ID: ${userId}`);

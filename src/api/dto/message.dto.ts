@@ -1,8 +1,36 @@
+import * as Joi from '@hapi/joi';
+
 export type ContactMessageCategory = 'suggestion' | 'complaint' | 'question';
 export type ContactMessageStatus = 'unread' | 'read' | 'replied';
 export type MessageEmailDeliveryStatus = 'not_requested' | 'pending' | 'sent' | 'failed' | 'skipped';
 export type ContactEmailDeliveryMode = 'in_app_only' | 'in_app_and_email';
 export type ContactEmailReplyToMode = 'resident_email' | 'custom';
+
+export const CreateContactMessageSchema = Joi.object({
+  subject: Joi.string().trim().max(255).required(),
+  category: Joi.string().valid('suggestion', 'complaint', 'question').required(),
+  content: Joi.string().trim().max(10000).required(),
+});
+
+export const CreateMessageReplySchema = Joi.object({
+  content: Joi.string().trim().max(10000).required(),
+  sendViaEmail: Joi.boolean().optional(),
+});
+
+export const UpdateContactEmailSettingsSchema = Joi.object({
+  deliveryMode: Joi.string().valid('in_app_only', 'in_app_and_email').required(),
+  recipientEmails: Joi.array().items(Joi.string().trim().email()).optional(),
+  fromName: Joi.string().trim().max(120).allow('', null).optional(),
+  fromEmail: Joi.string().trim().email().max(150).allow('', null).optional(),
+  replyToMode: Joi.string().valid('resident_email', 'custom').required(),
+  customReplyTo: Joi.string().trim().email().max(150).allow('', null).optional(),
+  smtpHost: Joi.string().trim().max(255).allow('', null).optional(),
+  smtpPort: Joi.number().integer().min(1).max(65535).allow(null).optional(),
+  smtpSecure: Joi.boolean().allow(null).optional(),
+  smtpUser: Joi.string().trim().max(255).allow('', null).optional(),
+  smtpFrom: Joi.string().trim().email().max(150).allow('', null).optional(),
+  smtpAppPassword: Joi.string().trim().max(500).allow('', null).optional(),
+});
 
 export interface CreateContactMessageDto {
   subject: string;

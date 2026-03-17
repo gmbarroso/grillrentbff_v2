@@ -14,13 +14,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
+import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
 import {
   ContactEmailSettingsDto,
   CreateContactMessageDto,
+  CreateContactMessageSchema,
   CreateMessageReplyDto,
+  CreateMessageReplySchema,
   MessageListResponseDto,
   MessageUnreadStateDto,
   UpdateContactEmailSettingsDto,
+  UpdateContactEmailSettingsSchema,
 } from '../dto/message.dto';
 import { UserRole } from '../entities/user.entity';
 import { MessageService } from '../services/message.service';
@@ -33,7 +37,7 @@ export class MessageController {
 
   @UseGuards(JwtAuthGuard)
   @Post('contact')
-  async createContactMessage(@Body() body: CreateContactMessageDto, @Req() req: any) {
+  async createContactMessage(@Body(new JoiValidationPipe(CreateContactMessageSchema)) body: CreateContactMessageDto, @Req() req: any) {
     this.logger.log('Received POST /messages/contact request');
     const token = req.user?.token;
 
@@ -89,7 +93,7 @@ export class MessageController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/replies')
-  async replyAsAdmin(@Param('id') id: string, @Body() body: CreateMessageReplyDto, @Req() req: any) {
+  async replyAsAdmin(@Param('id') id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
     this.logger.log(`Received POST /messages/${id}/replies request`);
     const token = req.user?.token;
 
@@ -120,7 +124,7 @@ export class MessageController {
   @UseGuards(JwtAuthGuard)
   @Put('settings/contact-email')
   async updateContactEmailSettings(
-    @Body() body: UpdateContactEmailSettingsDto,
+    @Body(new JoiValidationPipe(UpdateContactEmailSettingsSchema)) body: UpdateContactEmailSettingsDto,
     @Req() req: any,
   ): Promise<ContactEmailSettingsDto> {
     this.logger.log('Received PUT /messages/settings/contact-email request');

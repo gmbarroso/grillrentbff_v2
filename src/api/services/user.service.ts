@@ -106,7 +106,7 @@ export class UserService {
     const payload = { name: user.name, id: user.id, role: user.role, organizationId: organization.id };
     const token = this.authService.generateToken(payload);
     const decoded = this.authService.decodeToken(token);
-    const onboarding = await this.resolveOnboardingFlags(token, user);
+    const onboarding = this.resolveOnboardingFlags(user);
 
     this.logger.log(`User logged in successfully: ${user.email}`);
     return {
@@ -131,7 +131,7 @@ export class UserService {
     const onboarding = response?.onboarding ?? this.defaultOnboardingFlags();
     return {
       ...response,
-      ...onboarding,
+      onboarding,
     };
   }
 
@@ -224,16 +224,8 @@ export class UserService {
     }
   }
 
-  private async resolveOnboardingFlags(token: string, fallbackUser: User): Promise<OnboardingFlagsDto> {
-    try {
-      const profileResponse = await this.httpService.get<{
-        onboarding?: OnboardingFlagsDto;
-      }>('users/profile', undefined, token);
-      return profileResponse?.onboarding ?? this.deriveOnboardingFlagsFromUser(fallbackUser);
-    } catch (error) {
-      this.logger.warn('Failed to fetch onboarding flags from API, using local fallback');
-      return this.deriveOnboardingFlagsFromUser(fallbackUser);
-    }
+  private resolveOnboardingFlags(fallbackUser: User): OnboardingFlagsDto {
+    return this.deriveOnboardingFlagsFromUser(fallbackUser);
   }
 
   private deriveOnboardingFlagsFromUser(user: User): OnboardingFlagsDto {
