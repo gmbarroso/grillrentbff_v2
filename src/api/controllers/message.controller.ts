@@ -54,12 +54,7 @@ export class MessageController {
   @Get('admin')
   async getAdminMessages(@Req() req: any, @Query() query: Record<string, unknown>): Promise<MessageListResponseDto> {
     this.logger.log('Received GET /messages/admin request');
-    const token = req.user?.token;
-
-    if (!token) {
-      this.logger.error('Authorization token is missing in the request');
-      throw new UnauthorizedException('Authorization token is missing');
-    }
+    const token = this.ensureAdminAndGetToken(req);
 
     return this.messageService.getAdminMessages(token, query);
   }
@@ -96,12 +91,7 @@ export class MessageController {
   @Post(':id/replies')
   async replyAsAdmin(@Param('id', new ParseUUIDPipe()) id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
     this.logger.log(`Received POST /messages/${id}/replies request`);
-    const token = req.user?.token;
-
-    if (!token) {
-      this.logger.error('Authorization token is missing in the request');
-      throw new UnauthorizedException('Authorization token is missing');
-    }
+    const token = this.ensureAdminAndGetToken(req);
 
     return this.messageService.replyAsAdmin(id, body, token);
   }
@@ -142,8 +132,8 @@ export class MessageController {
     }
 
     if (req.user?.role !== UserRole.ADMIN) {
-      this.logger.error('User does not have admin permissions for contact email settings');
-      throw new ForbiddenException('You do not have permission to manage contact email settings');
+      this.logger.error('User does not have admin permissions to perform this action');
+      throw new ForbiddenException('You do not have permission to perform this action');
     }
 
     return token;

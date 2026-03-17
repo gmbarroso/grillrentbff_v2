@@ -52,6 +52,25 @@ describe('BFF MessageController', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it('rejects admin inbox for non-admin users', async () => {
+    await expect(
+      controller.getAdminMessages(
+        { user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any,
+        {},
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('rejects admin replies for non-admin users', async () => {
+    await expect(
+      controller.replyAsAdmin(
+        '11111111-1111-4111-8111-111111111111',
+        { content: 'reply' } as any,
+        { user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
   it('rejects contact email settings update without token', async () => {
     await expect(
       controller.updateContactEmailSettings(
