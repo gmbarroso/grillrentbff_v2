@@ -18,6 +18,8 @@ describe('OrganizationController', () => {
           useValue: {
             create: jest.fn(),
             findBySlug: jest.fn(),
+            findCurrent: jest.fn(),
+            updateCurrent: jest.fn(),
           },
         },
       ],
@@ -53,5 +55,33 @@ describe('OrganizationController', () => {
 
     await expect(controller.findBySlug('chacara-sacopa')).resolves.toEqual(payload);
     expect(service.findBySlug).toHaveBeenCalledWith('chacara-sacopa');
+  });
+
+  it('proxies current organization lookup', async () => {
+    const payload = { id: 'org-1', name: 'Condominio Norte' };
+    service.findCurrent.mockResolvedValue(payload as any);
+
+    await expect(controller.findCurrent({ user: { token: 'jwt-token' } } as any)).resolves.toEqual(payload);
+    expect(service.findCurrent).toHaveBeenCalledWith('jwt-token');
+  });
+
+  it('proxies current organization update for admins', async () => {
+    const dto = { name: 'Condominio Norte' };
+    const payload = { id: 'org-1', name: 'Condominio Norte' };
+    service.updateCurrent.mockResolvedValue(payload as any);
+
+    await expect(
+      controller.updateCurrent(dto as any, { user: { role: UserRole.ADMIN, token: 'jwt-token' } } as any),
+    ).resolves.toEqual(payload);
+    expect(service.updateCurrent).toHaveBeenCalledWith(dto, 'jwt-token');
+  });
+
+  it('rejects organization update for non-admin users', async () => {
+    await expect(
+      controller.updateCurrent({ name: 'Condominio Norte' } as any, {
+        user: { role: UserRole.RESIDENT, token: 'jwt-token' },
+      } as any),
+    ).rejects.toThrow(ForbiddenException);
+    expect(service.updateCurrent).not.toHaveBeenCalled();
   });
 });
