@@ -23,6 +23,7 @@ import {
   SetOnboardingEmailDto,
   VerifyOnboardingEmailDto,
 } from '../dto/onboarding.dto';
+import { CompleteFirstAccessTourDto, UserTourStateDto } from '../dto/tour.dto';
 
 @Injectable()
 export class UserService {
@@ -126,12 +127,15 @@ export class UserService {
       message: string;
       user: Record<string, unknown>;
       onboarding?: OnboardingFlagsDto;
+      tour?: UserTourStateDto;
     }>('users/profile', undefined, token);
 
     const onboarding = response?.onboarding ?? this.defaultOnboardingFlags();
+    const tour = response?.tour ?? { firstAccessTourVersionCompleted: null };
     return {
       ...response,
       onboarding,
+      tour,
     };
   }
 
@@ -203,6 +207,14 @@ export class UserService {
 
   async changePassword(data: ChangePasswordDto, token: string) {
     return this.httpService.put('users/change-password', data, token);
+  }
+
+  async completeFirstAccessTour(data: CompleteFirstAccessTourDto, token: string) {
+    return this.httpService.post('users/tour/complete', data, token);
+  }
+
+  async resetFirstAccessTour(token: string) {
+    return this.httpService.post('users/tour/reset', {}, token);
   }
 
   issueRefreshedSessionToken(

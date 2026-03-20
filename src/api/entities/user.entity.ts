@@ -71,4 +71,5 @@ export class User {
 
   @Column({ type: 'timestamptz', nullable: true })
   passwordResetExpiresAt?: Date | null;
+
 }

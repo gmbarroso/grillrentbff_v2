@@ -25,6 +25,7 @@ import {
   VerifyOnboardingEmailDto,
   VerifyOnboardingEmailSchema,
 } from '../dto/onboarding.dto';
+import { CompleteFirstAccessTourDto, CompleteFirstAccessTourSchema } from '../dto/tour.dto';
 
 @Controller('users')
 export class UserController {
@@ -254,5 +255,28 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
     return this.userService.changePassword(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('tour/complete')
+  async completeFirstAccessTour(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(CompleteFirstAccessTourSchema)) body: CompleteFirstAccessTourDto,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.completeFirstAccessTour(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('tour/reset')
+  async resetFirstAccessTour(@Req() req: any) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.resetFirstAccessTour(token);
   }
 }

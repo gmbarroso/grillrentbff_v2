@@ -34,6 +34,8 @@ describe('UserController', () => {
             setOnboardingEmail: jest.fn(),
             verifyOnboardingEmail: jest.fn(),
             changeOnboardingPassword: jest.fn(),
+            completeFirstAccessTour: jest.fn(),
+            resetFirstAccessTour: jest.fn(),
             issueRefreshedSessionToken: jest.fn(),
           },
         },
@@ -107,5 +109,38 @@ describe('UserController', () => {
         { password: 'Newpass123' } as any,
       ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('proxies first-access tour completion endpoint', async () => {
+    service.completeFirstAccessTour.mockResolvedValue({
+      message: 'First access tour marked as completed',
+      tour: { firstAccessTourVersionCompleted: 1 },
+    } as any);
+
+    await expect(
+      controller.completeFirstAccessTour(
+        { user: { token: 'jwt-token' } } as any,
+        { version: 1 },
+      ),
+    ).resolves.toEqual({
+      message: 'First access tour marked as completed',
+      tour: { firstAccessTourVersionCompleted: 1 },
+    });
+  });
+
+  it('proxies first-access tour reset endpoint', async () => {
+    service.resetFirstAccessTour.mockResolvedValue({
+      message: 'First access tour reset successfully',
+      tour: { firstAccessTourVersionCompleted: null },
+    } as any);
+
+    await expect(
+      controller.resetFirstAccessTour(
+        { user: { token: 'jwt-token' } } as any,
+      ),
+    ).resolves.toEqual({
+      message: 'First access tour reset successfully',
+      tour: { firstAccessTourVersionCompleted: null },
+    });
   });
 });
