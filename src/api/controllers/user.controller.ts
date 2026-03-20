@@ -188,12 +188,19 @@ export class UserController {
   async setOnboardingEmail(
     @Req() req: any,
     @Body(new JoiValidationPipe(SetOnboardingEmailSchema)) body: SetOnboardingEmailDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.user?.token;
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    return this.userService.setOnboardingEmail(body, token);
+    const result = await this.userService.setOnboardingEmail(body, token) as Record<string, unknown>;
+    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
+    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
+    return {
+      ...result,
+      ...refreshedSession,
+    };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -201,12 +208,19 @@ export class UserController {
   async verifyOnboardingEmail(
     @Req() req: any,
     @Body(new JoiValidationPipe(VerifyOnboardingEmailSchema)) body: VerifyOnboardingEmailDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.user?.token;
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    return this.userService.verifyOnboardingEmail(body, token);
+    const result = await this.userService.verifyOnboardingEmail(body, token) as Record<string, unknown>;
+    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
+    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
+    return {
+      ...result,
+      ...refreshedSession,
+    };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -214,12 +228,19 @@ export class UserController {
   async changeOnboardingPassword(
     @Req() req: any,
     @Body(new JoiValidationPipe(ChangeOnboardingPasswordSchema)) body: ChangeOnboardingPasswordDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.user?.token;
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    return this.userService.changeOnboardingPassword(body, token);
+    const result = await this.userService.changeOnboardingPassword(body, token) as Record<string, unknown>;
+    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
+    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
+    return {
+      ...result,
+      ...refreshedSession,
+    };
   }
 
   @UseGuards(JwtAuthGuard)

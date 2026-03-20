@@ -34,6 +34,7 @@ describe('UserController', () => {
             setOnboardingEmail: jest.fn(),
             verifyOnboardingEmail: jest.fn(),
             changeOnboardingPassword: jest.fn(),
+            issueRefreshedSessionToken: jest.fn(),
           },
         },
       ],
@@ -71,13 +72,32 @@ describe('UserController', () => {
   });
 
   it('proxies onboarding email endpoint with authenticated token', async () => {
-    service.setOnboardingEmail.mockResolvedValue({ message: 'ok' } as any);
+    service.setOnboardingEmail.mockResolvedValue({ message: 'ok', onboarding: { onboardingRequired: true } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
     await expect(
       controller.setOnboardingEmail(
         { user: { token: 'jwt-token' } } as any,
         { email: 'resident@example.com' },
+        res,
       ),
-    ).resolves.toEqual({ message: 'ok' });
+    ).resolves.toEqual({
+      message: 'ok',
+      onboarding: { onboardingRequired: true },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.issueRefreshedSessionToken).toHaveBeenCalledWith('jwt-token', {
+      message: 'ok',
+      onboarding: { onboardingRequired: true },
+    });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
   });
 
   it('rejects password change through generic profile update', async () => {
