@@ -73,6 +73,32 @@ describe('BFF MessageController', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it('proxies resident inbox for resident users', async () => {
+    service.getResidentMessages.mockResolvedValue({ data: [], total: 0, page: 1, lastPage: 1 });
+
+    await expect(
+      controller.getResidentMessages({ user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any, {}),
+    ).resolves.toEqual({ data: [], total: 0, page: 1, lastPage: 1 });
+
+    expect(service.getResidentMessages).toHaveBeenCalledWith('jwt-token', {});
+  });
+
+  it('rejects resident inbox for admin users', async () => {
+    await expect(
+      controller.getResidentMessages({ user: { role: UserRole.ADMIN, token: 'jwt-token' } } as any, {}),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('rejects resident reply without token', async () => {
+    await expect(
+      controller.replyAsResident(
+        '11111111-1111-4111-8111-111111111111',
+        { content: 'reply' } as any,
+        { user: { role: UserRole.RESIDENT } } as any,
+      ),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
   it('rejects contact email settings update without token', async () => {
     await expect(
       controller.updateContactEmailSettings(

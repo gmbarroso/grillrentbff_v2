@@ -63,17 +63,7 @@ export class MessageController {
   @Get('mine')
   async getResidentMessages(@Req() req: any, @Query() query: Record<string, unknown>): Promise<MessageListResponseDto> {
     this.logger.log('Received GET /messages/mine request');
-    const token = req.user?.token;
-
-    if (!token) {
-      this.logger.error('Authorization token is missing in the request');
-      throw new UnauthorizedException('Authorization token is missing');
-    }
-
-    if (req.user?.role !== UserRole.RESIDENT) {
-      this.logger.error('User does not have resident permissions to perform this action');
-      throw new ForbiddenException('You do not have permission to perform this action');
-    }
+    const token = this.ensureResidentAndGetToken(req);
 
     return this.messageService.getResidentMessages(token, query);
   }
@@ -119,17 +109,7 @@ export class MessageController {
   @Post(':id/replies/mine')
   async replyAsResident(@Param('id', new ParseUUIDPipe()) id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
     this.logger.log(`Received POST /messages/${id}/replies/mine request`);
-    const token = req.user?.token;
-
-    if (!token) {
-      this.logger.error('Authorization token is missing in the request');
-      throw new UnauthorizedException('Authorization token is missing');
-    }
-
-    if (req.user?.role !== UserRole.RESIDENT) {
-      this.logger.error('User does not have resident permissions to perform this action');
-      throw new ForbiddenException('You do not have permission to perform this action');
-    }
+    const token = this.ensureResidentAndGetToken(req);
 
     return this.messageService.replyAsResident(id, body, token);
   }
@@ -171,6 +151,22 @@ export class MessageController {
 
     if (req.user?.role !== UserRole.ADMIN) {
       this.logger.error('User does not have admin permissions to perform this action');
+      throw new ForbiddenException('You do not have permission to perform this action');
+    }
+
+    return token;
+  }
+
+  private ensureResidentAndGetToken(req: any): string {
+    const token = req.user?.token;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    if (req.user?.role !== UserRole.RESIDENT) {
+      this.logger.error('User does not have resident permissions to perform this action');
       throw new ForbiddenException('You do not have permission to perform this action');
     }
 
