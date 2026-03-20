@@ -37,6 +37,15 @@ export class MessageService {
     }
   }
 
+  async getResidentMessages(token: string, query: Record<string, unknown>): Promise<MessageListResponseDto> {
+    try {
+      return await this.httpService.get(`${this.apiUrl}/mine`, query, token);
+    } catch (error) {
+      this.logger.error(`Error in getResidentMessages: ${error.message}`);
+      throw error;
+    }
+  }
+
   async getUnreadCount(token: string): Promise<MessageUnreadStateDto> {
     try {
       return await this.httpService.get(`${this.apiUrl}/unread-count`, undefined, token);
@@ -60,6 +69,15 @@ export class MessageService {
       return await this.httpService.post(`${this.apiUrl}/${id}/replies`, body, token);
     } catch (error) {
       this.logger.error(`Error in replyAsAdmin: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async replyAsResident(id: string, body: CreateMessageReplyDto, token: string): Promise<MessageReplyDto> {
+    try {
+      return await this.httpService.post(`${this.apiUrl}/${id}/replies/mine`, body, token);
+    } catch (error) {
+      this.logger.error(`Error in replyAsResident: ${error.message}`);
       throw error;
     }
   }

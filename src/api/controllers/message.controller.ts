@@ -60,6 +60,25 @@ export class MessageController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('mine')
+  async getResidentMessages(@Req() req: any, @Query() query: Record<string, unknown>): Promise<MessageListResponseDto> {
+    this.logger.log('Received GET /messages/mine request');
+    const token = req.user?.token;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    if (req.user?.role !== UserRole.RESIDENT) {
+      this.logger.error('User does not have resident permissions to perform this action');
+      throw new ForbiddenException('You do not have permission to perform this action');
+    }
+
+    return this.messageService.getResidentMessages(token, query);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('unread-count')
   async getUnreadCount(@Req() req: any): Promise<MessageUnreadStateDto> {
     this.logger.log('Received GET /messages/unread-count request');
@@ -94,6 +113,25 @@ export class MessageController {
     const token = this.ensureAdminAndGetToken(req);
 
     return this.messageService.replyAsAdmin(id, body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/replies/mine')
+  async replyAsResident(@Param('id', new ParseUUIDPipe()) id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
+    this.logger.log(`Received POST /messages/${id}/replies/mine request`);
+    const token = req.user?.token;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    if (req.user?.role !== UserRole.RESIDENT) {
+      this.logger.error('User does not have resident permissions to perform this action');
+      throw new ForbiddenException('You do not have permission to perform this action');
+    }
+
+    return this.messageService.replyAsResident(id, body, token);
   }
 
   @UseGuards(JwtAuthGuard)

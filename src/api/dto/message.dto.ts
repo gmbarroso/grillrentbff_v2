@@ -3,6 +3,8 @@ import * as Joi from '@hapi/joi';
 export type ContactMessageCategory = 'suggestion' | 'complaint' | 'question';
 export type ContactMessageStatus = 'unread' | 'read' | 'replied';
 export type MessageEmailDeliveryStatus = 'not_requested' | 'pending' | 'sent' | 'failed' | 'skipped';
+export type MessageReplyOriginRole = 'admin' | 'resident';
+export type MessageReplyOriginChannel = 'in_app' | 'email_inbound';
 export type ContactEmailDeliveryMode = 'in_app_only' | 'in_app_and_email';
 export type ContactEmailReplyToMode = 'resident_email' | 'custom';
 
@@ -48,12 +50,15 @@ export interface MessageReplyDto {
   messageId: string;
   authorUserId: string;
   authorName: string;
+  originRole: MessageReplyOriginRole;
+  originChannel: MessageReplyOriginChannel;
   content: string;
   sendViaEmail: boolean;
   emailDeliveryStatus: MessageEmailDeliveryStatus;
   emailProviderMessageId?: string | null;
   emailSentAt?: string | null;
   emailLastError?: string | null;
+  externalMessageId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

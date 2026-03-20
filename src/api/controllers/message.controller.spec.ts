@@ -18,9 +18,11 @@ describe('BFF MessageController', () => {
           useValue: {
             createContactMessage: jest.fn(),
             getAdminMessages: jest.fn(),
+            getResidentMessages: jest.fn(),
             getUnreadCount: jest.fn(),
             markAsRead: jest.fn(),
             replyAsAdmin: jest.fn(),
+            replyAsResident: jest.fn(),
             deleteMessage: jest.fn(),
             getContactEmailSettings: jest.fn(),
             updateContactEmailSettings: jest.fn(),
