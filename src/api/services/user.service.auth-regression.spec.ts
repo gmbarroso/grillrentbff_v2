@@ -158,9 +158,9 @@ describe('Phase 5 - BFF auth regression flow', () => {
       access_token: 'phase5-token-user-1',
       exp: nowSeconds + 3600,
       mustProvideEmail: false,
-      mustVerifyEmail: false,
+      mustVerifyEmail: true,
       mustChangePassword: false,
-      onboardingRequired: false,
+      onboardingRequired: true,
     });
 
     await expect(guard.canActivate(createContext(loginResult.access_token))).resolves.toBe(true);
@@ -171,5 +171,35 @@ describe('Phase 5 - BFF auth regression flow', () => {
 
     await expect(guard.canActivate(createContext(loginResult.access_token))).rejects.toThrow(UnauthorizedException);
     await expect(guard.canActivate(createContext(loginResult.access_token))).rejects.toThrow('Token has been revoked');
+  });
+
+  it('marks onboarding as required on login when resident has pending email verification', async () => {
+    (userRepository.findOne as jest.Mock).mockImplementationOnce(async ({ where }: any) => {
+      if (
+        where?.apartment === userRecord.apartment
+        && where?.block === userRecord.block
+        && where?.organizationId === userRecord.organizationId
+      ) {
+        return {
+          ...userRecord,
+          emailVerifiedAt: new Date('2026-03-20T10:00:00.000Z'),
+          pendingEmail: 'new-email@example.com',
+          mustChangePassword: false,
+        };
+      }
+      return null;
+    });
+
+    const loginResult = await userService.login({
+      organizationSlug: 'chacara-sacopa',
+      apartment: '101',
+      block: 1,
+      password: 'password123',
+    });
+
+    expect(loginResult.mustProvideEmail).toBe(false);
+    expect(loginResult.mustVerifyEmail).toBe(true);
+    expect(loginResult.mustChangePassword).toBe(false);
+    expect(loginResult.onboardingRequired).toBe(true);
   });
 });

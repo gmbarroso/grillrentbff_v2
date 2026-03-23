@@ -303,13 +303,14 @@ export class UserService {
   private deriveOnboardingFlagsFromUser(user: User): OnboardingFlagsDto {
     const hasVerifiedActiveEmail = Boolean(user.email && user.emailVerifiedAt);
     const mustProvideEmail = !user.email && !user.pendingEmail;
-    const mustVerifyEmail = !hasVerifiedActiveEmail && !mustProvideEmail;
+    const hasPendingEmailVerification = Boolean(user.pendingEmail);
+    const mustVerifyEmail = hasPendingEmailVerification || (!hasVerifiedActiveEmail && !mustProvideEmail);
     const mustChangePassword = Boolean(user.mustChangePassword);
     return {
       mustProvideEmail,
       mustVerifyEmail,
       mustChangePassword,
-      onboardingRequired: !hasVerifiedActiveEmail || mustChangePassword,
+      onboardingRequired: hasPendingEmailVerification || !hasVerifiedActiveEmail || mustChangePassword,
     };
   }
 
