@@ -20,8 +20,6 @@ import {
   ContactEmailSettingsDto,
   CreateContactMessageDto,
   CreateContactMessageSchema,
-  CreateMessageReplyDto,
-  CreateMessageReplySchema,
   MessageListResponseDto,
   MessageUnreadStateDto,
   UpdateContactEmailSettingsDto,
@@ -94,24 +92,6 @@ export class MessageController {
     }
 
     return this.messageService.markAsRead(id, token);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/replies')
-  async replyAsAdmin(@Param('id', new ParseUUIDPipe()) id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
-    this.logger.log(`Received POST /messages/${id}/replies request`);
-    const token = this.ensureAdminAndGetToken(req);
-
-    return this.messageService.replyAsAdmin(id, body, token);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/replies/mine')
-  async replyAsResident(@Param('id', new ParseUUIDPipe()) id: string, @Body(new JoiValidationPipe(CreateMessageReplySchema)) body: CreateMessageReplyDto, @Req() req: any) {
-    this.logger.log(`Received POST /messages/${id}/replies/mine request`);
-    const token = this.ensureResidentAndGetToken(req);
-
-    return this.messageService.replyAsResident(id, body, token);
   }
 
   @UseGuards(JwtAuthGuard)

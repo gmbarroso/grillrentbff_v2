@@ -46,11 +46,6 @@ export const CreateContactMessageSchema = Joi.object({
   attachments: Joi.array().items(contactAttachmentSchema).max(MAX_ATTACHMENTS).optional(),
 });
 
-export const CreateMessageReplySchema = Joi.object({
-  content: Joi.string().trim().max(10000).required(),
-  sendViaEmail: Joi.boolean().optional(),
-});
-
 export const UpdateContactEmailSettingsSchema = Joi.object({
   deliveryMode: Joi.string().valid('in_app_only', 'in_app_and_email').required(),
   recipientEmails: Joi.array().items(Joi.string().trim().email()).optional(),
@@ -71,11 +66,6 @@ export interface CreateContactMessageDto {
   category: ContactMessageCategory;
   content: string;
   attachments?: string[];
-}
-
-export interface CreateMessageReplyDto {
-  content: string;
-  sendViaEmail?: boolean;
 }
 
 export interface MessageReplyDto {
