@@ -102,6 +102,64 @@ describe('UserController', () => {
     expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
   });
 
+  it('proxies onboarding verify endpoint with refreshed token and cookie', async () => {
+    service.verifyOnboardingEmail.mockResolvedValue({ message: 'ok', onboarding: { onboardingRequired: false } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
+    await expect(
+      controller.verifyOnboardingEmail(
+        { user: { token: 'jwt-token' } } as any,
+        { token: '123456' } as any,
+        res,
+      ),
+    ).resolves.toEqual({
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.issueRefreshedSessionToken).toHaveBeenCalledWith('jwt-token', {
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+    });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
+  });
+
+  it('proxies onboarding change-password endpoint with refreshed token and cookie', async () => {
+    service.changeOnboardingPassword.mockResolvedValue({ message: 'ok', onboarding: { onboardingRequired: false } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
+    await expect(
+      controller.changeOnboardingPassword(
+        { user: { token: 'jwt-token' } } as any,
+        { password: 'NewPassword123!' } as any,
+        res,
+      ),
+    ).resolves.toEqual({
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.issueRefreshedSessionToken).toHaveBeenCalledWith('jwt-token', {
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+    });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
+  });
+
   it('rejects password change through generic profile update', async () => {
     await expect(
       controller.updateProfile(
