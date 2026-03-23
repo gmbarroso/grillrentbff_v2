@@ -34,6 +34,9 @@ describe('UserController', () => {
             setOnboardingEmail: jest.fn(),
             verifyOnboardingEmail: jest.fn(),
             changeOnboardingPassword: jest.fn(),
+            completeFirstAccessTour: jest.fn(),
+            resetFirstAccessTour: jest.fn(),
+            issueRefreshedSessionToken: jest.fn(),
           },
         },
       ],
@@ -71,13 +74,90 @@ describe('UserController', () => {
   });
 
   it('proxies onboarding email endpoint with authenticated token', async () => {
-    service.setOnboardingEmail.mockResolvedValue({ message: 'ok' } as any);
+    service.setOnboardingEmail.mockResolvedValue({ message: 'ok', onboarding: { onboardingRequired: true } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
     await expect(
       controller.setOnboardingEmail(
         { user: { token: 'jwt-token' } } as any,
         { email: 'resident@example.com' },
+        res,
       ),
-    ).resolves.toEqual({ message: 'ok' });
+    ).resolves.toEqual({
+      message: 'ok',
+      onboarding: { onboardingRequired: true },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.issueRefreshedSessionToken).toHaveBeenCalledWith('jwt-token', {
+      message: 'ok',
+      onboarding: { onboardingRequired: true },
+    });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
+  });
+
+  it('proxies onboarding verify endpoint with refreshed token and cookie', async () => {
+    service.verifyOnboardingEmail.mockResolvedValue({ message: 'ok', onboarding: { onboardingRequired: false } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
+    await expect(
+      controller.verifyOnboardingEmail(
+        { user: { token: 'jwt-token' } } as any,
+        { token: '123456' } as any,
+        res,
+      ),
+    ).resolves.toEqual({
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.issueRefreshedSessionToken).toHaveBeenCalledWith('jwt-token', {
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+    });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
+  });
+
+  it('proxies onboarding change-password endpoint with refreshed token and cookie', async () => {
+    service.changeOnboardingPassword.mockResolvedValue({ message: 'ok', onboarding: { onboardingRequired: false } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
+    await expect(
+      controller.changeOnboardingPassword(
+        { user: { token: 'jwt-token' } } as any,
+        { password: 'NewPassword123!' } as any,
+        res,
+      ),
+    ).resolves.toEqual({
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.issueRefreshedSessionToken).toHaveBeenCalledWith('jwt-token', {
+      message: 'ok',
+      onboarding: { onboardingRequired: false },
+    });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
   });
 
   it('rejects password change through generic profile update', async () => {
@@ -87,5 +167,38 @@ describe('UserController', () => {
         { password: 'Newpass123' } as any,
       ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('proxies first-access tour completion endpoint', async () => {
+    service.completeFirstAccessTour.mockResolvedValue({
+      message: 'First access tour marked as completed',
+      tour: { firstAccessTourVersionCompleted: 1 },
+    } as any);
+
+    await expect(
+      controller.completeFirstAccessTour(
+        { user: { token: 'jwt-token' } } as any,
+        { version: 1 },
+      ),
+    ).resolves.toEqual({
+      message: 'First access tour marked as completed',
+      tour: { firstAccessTourVersionCompleted: 1 },
+    });
+  });
+
+  it('proxies first-access tour reset endpoint', async () => {
+    service.resetFirstAccessTour.mockResolvedValue({
+      message: 'First access tour reset successfully',
+      tour: { firstAccessTourVersionCompleted: null },
+    } as any);
+
+    await expect(
+      controller.resetFirstAccessTour(
+        { user: { token: 'jwt-token' } } as any,
+      ),
+    ).resolves.toEqual({
+      message: 'First access tour reset successfully',
+      tour: { firstAccessTourVersionCompleted: null },
+    });
   });
 });

@@ -35,4 +35,18 @@ describe('BFF BookingService', () => {
     expect(result).toEqual(expectedResult);
     expect(httpService.get).toHaveBeenCalledWith('bookings', { page: 1 }, 'jwt-token');
   });
+
+  it('forwards batch booking payload as-is', async () => {
+    const body = {
+      resourceId: 'resource-1',
+      slots: [{ startTime: '2026-06-10T10:00:00.000Z', endTime: '2026-06-10T11:00:00.000Z' }],
+    };
+    const payload = { summary: { requested: 1, created: 1, skipped: 0 }, created: [], skipped: [] };
+    httpService.post.mockResolvedValue(payload);
+
+    const result = await service.createBatchBooking(body, 'jwt-token');
+
+    expect(result).toEqual(payload);
+    expect(httpService.post).toHaveBeenCalledWith('bookings/batch', body, 'jwt-token');
+  });
 });

@@ -8,15 +8,56 @@ export type MessageReplyOriginChannel = 'in_app' | 'email_inbound';
 export type ContactEmailDeliveryMode = 'in_app_only' | 'in_app_and_email';
 export type ContactEmailReplyToMode = 'resident_email' | 'custom';
 
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_SIZE_BYTES = 1 * 1024 * 1024;
+const IMAGE_DATA_URL_REGEX = /^data:image\/(?:png|jpeg|jpg|webp|gif|svg\+xml);base64,[a-z0-9+/=]+$/i;
+
+const estimateDataUrlBytes = (dataUrl: string): number => {
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex < 0) return Number.POSITIVE_INFINITY;
+
+  const base64Payload = dataUrl.slice(commaIndex + 1);
+  const normalizedPayload = base64Payload.replace(/\s/g, '');
+  if (!normalizedPayload || normalizedPayload.length % 4 !== 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  if (!/^[a-z0-9+/=]+$/i.test(normalizedPayload)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const equalsCount = (normalizedPayload.match(/=/g) || []).length;
+  if (equalsCount > 2 || (equalsCount > 0 && !/=+$/.test(normalizedPayload))) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const paddingChars = normalizedPayload.endsWith('==') ? 2 : normalizedPayload.endsWith('=') ? 1 : 0;
+  const estimatedBytes = Math.floor((normalizedPayload.length * 3) / 4) - paddingChars;
+  return estimatedBytes > 0 ? estimatedBytes : Number.POSITIVE_INFINITY;
+};
+
+const contactAttachmentSchema = Joi.string()
+  .trim()
+  .custom((value: string, helpers) => {
+    if (!IMAGE_DATA_URL_REGEX.test(value)) {
+      return helpers.error('any.invalid');
+    }
+
+    if (estimateDataUrlBytes(value) > MAX_ATTACHMENT_SIZE_BYTES) {
+      return helpers.error('any.invalid');
+    }
+
+    return value;
+  })
+  .messages({
+    'any.invalid': `attachments must contain valid image data URLs up to ${MAX_ATTACHMENT_SIZE_BYTES} bytes each`,
+  });
+
 export const CreateContactMessageSchema = Joi.object({
   subject: Joi.string().trim().max(255).required(),
   category: Joi.string().valid('suggestion', 'complaint', 'question').required(),
   content: Joi.string().trim().max(10000).required(),
-});
-
-export const CreateMessageReplySchema = Joi.object({
-  content: Joi.string().trim().max(10000).required(),
-  sendViaEmail: Joi.boolean().optional(),
+  attachments: Joi.array().items(contactAttachmentSchema).max(MAX_ATTACHMENTS).optional(),
 });
 
 export const UpdateContactEmailSettingsSchema = Joi.object({
@@ -38,11 +79,7 @@ export interface CreateContactMessageDto {
   subject: string;
   category: ContactMessageCategory;
   content: string;
-}
-
-export interface CreateMessageReplyDto {
-  content: string;
-  sendViaEmail?: boolean;
+  attachments?: string[];
 }
 
 export interface MessageReplyDto {
@@ -73,6 +110,7 @@ export interface MessageDto {
   subject: string;
   category: ContactMessageCategory;
   content: string;
+  attachments?: string[] | null;
   status: ContactMessageStatus;
   readAt?: string | null;
   adminEmailDeliveryStatus: MessageEmailDeliveryStatus;

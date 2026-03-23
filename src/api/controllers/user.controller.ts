@@ -25,6 +25,7 @@ import {
   VerifyOnboardingEmailDto,
   VerifyOnboardingEmailSchema,
 } from '../dto/onboarding.dto';
+import { CompleteFirstAccessTourDto, CompleteFirstAccessTourSchema } from '../dto/tour.dto';
 
 @Controller('users')
 export class UserController {
@@ -188,12 +189,17 @@ export class UserController {
   async setOnboardingEmail(
     @Req() req: any,
     @Body(new JoiValidationPipe(SetOnboardingEmailSchema)) body: SetOnboardingEmailDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.user?.token;
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    return this.userService.setOnboardingEmail(body, token);
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.setOnboardingEmail(body, token) as Promise<Record<string, unknown>>,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -201,12 +207,17 @@ export class UserController {
   async verifyOnboardingEmail(
     @Req() req: any,
     @Body(new JoiValidationPipe(VerifyOnboardingEmailSchema)) body: VerifyOnboardingEmailDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.user?.token;
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    return this.userService.verifyOnboardingEmail(body, token);
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.verifyOnboardingEmail(body, token) as Promise<Record<string, unknown>>,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -214,12 +225,17 @@ export class UserController {
   async changeOnboardingPassword(
     @Req() req: any,
     @Body(new JoiValidationPipe(ChangeOnboardingPasswordSchema)) body: ChangeOnboardingPasswordDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const token = req.user?.token;
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    return this.userService.changeOnboardingPassword(body, token);
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.changeOnboardingPassword(body, token) as Promise<Record<string, unknown>>,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -233,5 +249,42 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
     return this.userService.changePassword(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('tour/complete')
+  async completeFirstAccessTour(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(CompleteFirstAccessTourSchema)) body: CompleteFirstAccessTourDto,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.completeFirstAccessTour(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('tour/reset')
+  async resetFirstAccessTour(@Req() req: any) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.userService.resetFirstAccessTour(token);
+  }
+
+  private async respondWithRefreshedSession(
+    res: Response,
+    token: string,
+    runOnboardingAction: () => Promise<Record<string, unknown>>,
+  ) {
+    const result = await runOnboardingAction();
+    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
+    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
+    return {
+      ...result,
+      ...refreshedSession,
+    };
   }
 }

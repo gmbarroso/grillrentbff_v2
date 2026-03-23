@@ -24,6 +24,21 @@ export class BookingController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('batch')
+  async createBatchBooking(@Body() body: any, @Req() req: any) {
+    this.logger.log('Received POST /bookings/batch request');
+    const token = req.user?.token;
+
+    if (!token) {
+      this.logger.error('Authorization token is missing in the request');
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+
+    this.logger.log('Calling BookingService to create batch bookings');
+    return this.bookingService.createBatchBooking(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('user/:userId')
   async getBookingsByUser(@Param('userId') userId: string, @Req() req: any) {
     this.logger.log(`Received GET /bookings/user/${userId} request`);

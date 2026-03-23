@@ -23,6 +23,7 @@ import {
   SetOnboardingEmailDto,
   VerifyOnboardingEmailDto,
 } from '../dto/onboarding.dto';
+import { CompleteFirstAccessTourDto, UserTourStateDto } from '../dto/tour.dto';
 
 @Injectable()
 export class UserService {
@@ -126,12 +127,15 @@ export class UserService {
       message: string;
       user: Record<string, unknown>;
       onboarding?: OnboardingFlagsDto;
+      tour?: UserTourStateDto;
     }>('users/profile', undefined, token);
 
     const onboarding = response?.onboarding ?? this.defaultOnboardingFlags();
+    const tour = response?.tour ?? { firstAccessTourVersionCompleted: null };
     return {
       ...response,
       onboarding,
+      tour,
     };
   }
 
@@ -205,6 +209,74 @@ export class UserService {
     return this.httpService.put('users/change-password', data, token);
   }
 
+  async completeFirstAccessTour(data: CompleteFirstAccessTourDto, token: string) {
+    return this.httpService.post('users/tour/complete', data, token);
+  }
+
+  async resetFirstAccessTour(token: string) {
+    return this.httpService.post('users/tour/reset', {}, token);
+  }
+
+  issueRefreshedSessionToken(
+    currentToken: string,
+    onboardingResult?: Record<string, unknown>,
+  ): { access_token: string; token: string; exp?: number } {
+    const decoded = this.authService.decodeToken(currentToken);
+    if (
+      !decoded
+      || typeof decoded.sub !== 'string'
+      || typeof decoded.name !== 'string'
+      || typeof decoded.role !== 'string'
+      || typeof decoded.organizationId !== 'string'
+    ) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const fallbackOnboarding = decoded?.onboarding && typeof decoded.onboarding === 'object'
+      ? decoded.onboarding
+      : this.defaultOnboardingFlags();
+    const responseOnboarding = onboardingResult?.onboarding && typeof onboardingResult.onboarding === 'object'
+      ? onboardingResult.onboarding as Partial<OnboardingFlagsDto>
+      : undefined;
+    const mergedOnboarding: OnboardingFlagsDto = {
+      mustProvideEmail: Boolean(
+        responseOnboarding?.mustProvideEmail
+        ?? onboardingResult?.mustProvideEmail
+        ?? fallbackOnboarding.mustProvideEmail,
+      ),
+      mustVerifyEmail: Boolean(
+        responseOnboarding?.mustVerifyEmail
+        ?? onboardingResult?.mustVerifyEmail
+        ?? fallbackOnboarding.mustVerifyEmail,
+      ),
+      mustChangePassword: Boolean(
+        responseOnboarding?.mustChangePassword
+        ?? onboardingResult?.mustChangePassword
+        ?? fallbackOnboarding.mustChangePassword,
+      ),
+      onboardingRequired: Boolean(
+        responseOnboarding?.onboardingRequired
+        ?? onboardingResult?.onboardingRequired
+        ?? fallbackOnboarding.onboardingRequired,
+      ),
+    };
+
+    const refreshedToken = this.authService.generateToken({
+      id: decoded.sub,
+      name: decoded.name,
+      role: decoded.role,
+      organizationId: decoded.organizationId,
+      onboarding: mergedOnboarding,
+    });
+    const refreshedDecoded = this.authService.decodeToken(refreshedToken);
+
+    return {
+      token: refreshedToken,
+      access_token: refreshedToken,
+      exp: refreshedDecoded?.exp,
+    };
+  }
+
   async requestForgotPassword(data: ForgotPasswordRequestDto) {
     return this.httpService.post('users/forgot-password/request', data);
   }
@@ -231,13 +303,14 @@ export class UserService {
   private deriveOnboardingFlagsFromUser(user: User): OnboardingFlagsDto {
     const hasVerifiedActiveEmail = Boolean(user.email && user.emailVerifiedAt);
     const mustProvideEmail = !user.email && !user.pendingEmail;
-    const mustVerifyEmail = !hasVerifiedActiveEmail && !mustProvideEmail;
+    const hasPendingEmailVerification = Boolean(user.pendingEmail);
+    const mustVerifyEmail = hasPendingEmailVerification || (!hasVerifiedActiveEmail && !mustProvideEmail);
     const mustChangePassword = Boolean(user.mustChangePassword);
     return {
       mustProvideEmail,
       mustVerifyEmail,
       mustChangePassword,
-      onboardingRequired: !hasVerifiedActiveEmail || mustChangePassword,
+      onboardingRequired: hasPendingEmailVerification || !hasVerifiedActiveEmail || mustChangePassword,
     };
   }
 

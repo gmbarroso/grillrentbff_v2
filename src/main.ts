@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { json, urlencoded } from 'express';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:3000',
@@ -21,8 +22,18 @@ const parseAllowedOrigins = (): string[] => {
 };
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+  });
   const allowedOrigins = parseAllowedOrigins();
+
+  app.use('/messages/contact', json({ limit: '10mb' }));
+  app.use('/messages/contact', urlencoded({ extended: true, limit: '10mb' }));
+  app.use('/organizations', json({ limit: '10mb' }));
+  app.use('/organizations', urlencoded({ extended: true, limit: '10mb' }));
+
+  app.use(json({ limit: '1mb' }));
+  app.use(urlencoded({ extended: true, limit: '1mb' }));
 
   app.enableCors({
     origin: (origin, callback) => {

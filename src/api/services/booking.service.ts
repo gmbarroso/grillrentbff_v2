@@ -18,6 +18,15 @@ export class BookingService {
     }
   }
 
+  async createBatchBooking(body: any, token: string) {
+    try {
+      return await this.httpService.post(`${this.apiUrl}/batch`, body, token);
+    } catch (error) {
+      this.logger.error(`Error in createBatchBooking: ${error.message}`);
+      throw error;
+    }
+  }
+
   async getBookingsByUser(userId: string, token: string) {
     try {
       return await this.httpService.get(`${this.apiUrl}/user/${userId}`, undefined, token);

@@ -1,41 +1,27 @@
 import * as Joi from '@hapi/joi';
-import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 
-export class CreateOrganizationDto {
-  name!: string;
-  slug?: string;
-  address?: string;
-  email?: string;
-  phone?: string;
-  businessHours?: string;
+export class UpdateOrganizationDto {
+  name?: string;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  businessHours?: string | null;
   timezone?: string;
-  openingTime?: string;
-  closingTime?: string;
-  logoUrl?: string;
+  openingTime?: string | null;
+  closingTime?: string | null;
+  logoUrl?: string | null;
 }
 
 const isDataImageUrl = (value: string): boolean => /^data:image\/(?:png|jpeg|jpg|svg\+xml);base64,[a-z0-9+/=]+$/i.test(value);
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
 
-export const CreateOrganizationSchema = Joi.object({
-  name: Joi.string().trim().min(2).max(120).required(),
-  slug: Joi.string()
-    .trim()
-    .optional()
-    .custom((value, helpers) => {
-      if (value === undefined) return value;
-      const normalized = normalizeSlug(value);
-      if (!normalized) {
-        return helpers.error('any.invalid');
-      }
-      return normalized;
-    }, 'organization slug normalization')
-    .messages({ 'any.invalid': 'slug must contain at least one alphanumeric character' }),
+export const UpdateOrganizationSchema = Joi.object({
+  name: Joi.string().trim().max(120).allow('').optional(),
   address: Joi.string().max(1000).allow('', null).optional(),
   email: Joi.string().email().allow('', null).optional(),
   phone: Joi.string().max(40).allow('', null).optional(),
   businessHours: Joi.string().max(240).allow('', null).optional(),
-  timezone: Joi.string().max(64).default('America/Sao_Paulo'),
+  timezone: Joi.string().max(64).optional(),
   openingTime: Joi.string().pattern(/^\d{2}:\d{2}$/).allow('', null).optional(),
   closingTime: Joi.string().pattern(/^\d{2}:\d{2}$/).allow('', null).optional(),
   logoUrl: Joi.string()
@@ -51,4 +37,4 @@ export const CreateOrganizationSchema = Joi.object({
     }, 'organization logo URL validation')
     .messages({ 'any.invalid': 'logoUrl must be an http(s) URL or a base64 data:image value' })
     .optional(),
-});
+}).min(1);

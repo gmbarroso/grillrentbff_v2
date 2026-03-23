@@ -4,10 +4,8 @@ import { WinstonLoggerService } from '../../shared/logger/winston-logger.service
 import {
   ContactEmailSettingsDto,
   CreateContactMessageDto,
-  CreateMessageReplyDto,
   MessageDto,
   MessageListResponseDto,
-  MessageReplyDto,
   MessageUnreadStateDto,
   UpdateContactEmailSettingsDto,
 } from '../dto/message.dto';
@@ -60,24 +58,6 @@ export class MessageService {
       return await this.httpService.post(`${this.apiUrl}/${id}/mark-read`, {}, token);
     } catch (error) {
       this.logger.error(`Error in markAsRead: ${error.message}`);
-      throw error;
-    }
-  }
-
-  async replyAsAdmin(id: string, body: CreateMessageReplyDto, token: string): Promise<MessageReplyDto> {
-    try {
-      return await this.httpService.post(`${this.apiUrl}/${id}/replies`, body, token);
-    } catch (error) {
-      this.logger.error(`Error in replyAsAdmin: ${error.message}`);
-      throw error;
-    }
-  }
-
-  async replyAsResident(id: string, body: CreateMessageReplyDto, token: string): Promise<MessageReplyDto> {
-    try {
-      return await this.httpService.post(`${this.apiUrl}/${id}/replies/mine`, body, token);
-    } catch (error) {
-      this.logger.error(`Error in replyAsResident: ${error.message}`);
       throw error;
     }
   }

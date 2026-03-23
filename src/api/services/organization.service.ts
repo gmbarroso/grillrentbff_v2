@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateOrganizationDto } from '../dto/create-organization.dto';
+import { UpdateOrganizationDto } from '../dto/update-organization.dto';
 import { HttpServiceWrapper } from '../../shared/http/http.service';
 import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 
@@ -17,5 +18,13 @@ export class OrganizationService {
       throw new BadRequestException('Invalid organization slug');
     }
     return this.httpService.get(`organizations/slug/${normalizedSlug}`);
+  }
+
+  async findCurrent(token: string) {
+    return this.httpService.get('organizations/current', undefined, token);
+  }
+
+  async updateCurrent(updateOrganizationDto: UpdateOrganizationDto, token: string) {
+    return this.httpService.put('organizations/current', updateOrganizationDto, token);
   }
 }
