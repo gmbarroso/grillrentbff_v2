@@ -5,6 +5,7 @@ describe('BFF BookingController', () => {
   let controller: BookingController;
   const bookingService = {
     createBooking: jest.fn(),
+    createBatchBooking: jest.fn(),
     getBookingsByUser: jest.fn(),
     getAllBookings: jest.fn(),
     deleteBooking: jest.fn(),
@@ -36,6 +37,36 @@ describe('BFF BookingController', () => {
       '2026-06-10T11:00:00.000Z',
       'jwt-token',
     );
+  });
+
+  it('forwards batch booking with token', async () => {
+    const payload = { summary: { requested: 2, created: 1, skipped: 1 }, created: [], skipped: [] };
+    const body = {
+      resourceId: 'resource-1',
+      slots: [
+        { startTime: '2026-06-10T10:00:00.000Z', endTime: '2026-06-10T11:00:00.000Z' },
+        { startTime: '2026-06-11T10:00:00.000Z', endTime: '2026-06-11T11:00:00.000Z' },
+      ],
+    };
+    bookingService.createBatchBooking.mockResolvedValue(payload);
+
+    await expect(
+      controller.createBatchBooking(body, { user: { token: 'jwt-token' } }),
+    ).resolves.toEqual(payload);
+
+    expect(bookingService.createBatchBooking).toHaveBeenCalledWith(body, 'jwt-token');
+  });
+
+  it('throws UnauthorizedException when batch booking token is missing', async () => {
+    await expect(
+      controller.createBatchBooking(
+        {
+          resourceId: 'resource-1',
+          slots: [{ startTime: '2026-06-10T10:00:00.000Z', endTime: '2026-06-10T11:00:00.000Z' }],
+        },
+        { user: {} },
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('throws UnauthorizedException when availability token is missing', async () => {
