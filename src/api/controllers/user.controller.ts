@@ -195,13 +195,11 @@ export class UserController {
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    const result = await this.userService.setOnboardingEmail(body, token) as Record<string, unknown>;
-    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
-    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
-    return {
-      ...result,
-      ...refreshedSession,
-    };
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.setOnboardingEmail(body, token) as Promise<Record<string, unknown>>,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -215,13 +213,11 @@ export class UserController {
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    const result = await this.userService.verifyOnboardingEmail(body, token) as Record<string, unknown>;
-    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
-    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
-    return {
-      ...result,
-      ...refreshedSession,
-    };
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.verifyOnboardingEmail(body, token) as Promise<Record<string, unknown>>,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -235,13 +231,11 @@ export class UserController {
     if (!token) {
       throw new UnauthorizedException('Authorization token is missing');
     }
-    const result = await this.userService.changeOnboardingPassword(body, token) as Record<string, unknown>;
-    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
-    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
-    return {
-      ...result,
-      ...refreshedSession,
-    };
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.changeOnboardingPassword(body, token) as Promise<Record<string, unknown>>,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -278,5 +272,19 @@ export class UserController {
       throw new UnauthorizedException('Authorization token is missing');
     }
     return this.userService.resetFirstAccessTour(token);
+  }
+
+  private async respondWithRefreshedSession(
+    res: Response,
+    token: string,
+    runOnboardingAction: () => Promise<Record<string, unknown>>,
+  ) {
+    const result = await runOnboardingAction();
+    const refreshedSession = this.userService.issueRefreshedSessionToken(token, result);
+    setAuthCookie(res, refreshedSession.access_token, refreshedSession.exp);
+    return {
+      ...result,
+      ...refreshedSession,
+    };
   }
 }
