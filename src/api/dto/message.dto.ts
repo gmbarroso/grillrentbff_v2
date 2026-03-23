@@ -18,8 +18,22 @@ const estimateDataUrlBytes = (dataUrl: string): number => {
 
   const base64Payload = dataUrl.slice(commaIndex + 1);
   const normalizedPayload = base64Payload.replace(/\s/g, '');
+  if (!normalizedPayload || normalizedPayload.length % 4 !== 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  if (!/^[a-z0-9+/=]+$/i.test(normalizedPayload)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const equalsCount = (normalizedPayload.match(/=/g) || []).length;
+  if (equalsCount > 2 || (equalsCount > 0 && !/=+$/.test(normalizedPayload))) {
+    return Number.POSITIVE_INFINITY;
+  }
+
   const paddingChars = normalizedPayload.endsWith('==') ? 2 : normalizedPayload.endsWith('=') ? 1 : 0;
-  return Math.floor((normalizedPayload.length * 3) / 4) - paddingChars;
+  const estimatedBytes = Math.floor((normalizedPayload.length * 3) / 4) - paddingChars;
+  return estimatedBytes > 0 ? estimatedBytes : Number.POSITIVE_INFINITY;
 };
 
 const contactAttachmentSchema = Joi.string()
