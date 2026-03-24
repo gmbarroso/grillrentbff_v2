@@ -30,6 +30,8 @@ export class JwtAuthGuard implements CanActivate {
     '/users/onboarding/email',
     '/users/onboarding/verify',
     '/users/onboarding/change-password',
+    '/users/tour/complete',
+    '/users/tour/reset',
   ]);
   private readonly onboardingCache = new Map<
     string,
