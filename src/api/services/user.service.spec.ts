@@ -207,6 +207,16 @@ describe('UserService - BFF-owned logout revocation', () => {
     })).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects redirect url when allowlist env is configured but invalid', async () => {
+    process.env.AUTH_REDIRECT_ALLOWED_ORIGINS = 'not-a-valid-origin';
+
+    await expect(service.requestForgotPassword({
+      organizationSlug: 'chacara-sacopa',
+      email: 'resident@example.com',
+      redirectUrl: 'https://seuze.tech/reset-password?token=1',
+    })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('normalizes forgot-password confirmation payload before proxying', async () => {
     httpService.post.mockResolvedValue({ message: 'ok' });
 

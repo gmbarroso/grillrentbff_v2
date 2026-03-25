@@ -22,11 +22,26 @@ const CORS_ENV_KEYS = [
 
 const normalizeOrigin = (origin: string): string => origin.trim().replace(/\/+$/, '').toLowerCase();
 
+const parseOriginValue = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    return normalizeOrigin(new URL(trimmed).origin);
+  } catch {
+    // Value may already be an origin (host:port with scheme).
+    if (/^https?:\/\/[^/]+$/i.test(trimmed)) {
+      return normalizeOrigin(trimmed);
+    }
+    return null;
+  }
+};
+
 const parseAllowedOrigins = (): string[] => {
   const fromEnv = CORS_ENV_KEYS
     .flatMap((key) => (process.env[key] || '').split(','))
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+    .map((origin) => parseOriginValue(origin))
+    .filter((origin): origin is string => Boolean(origin));
 
   return Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...fromEnv].map(normalizeOrigin)));
 };
@@ -59,7 +74,12 @@ async function bootstrap() {
         return;
       }
 
-      logger.warn(`Blocked CORS origin: ${origin}`);
+      const logMessage = `Blocked CORS origin: ${origin}`;
+      if ((process.env.NODE_ENV || '').trim().toLowerCase() === 'production') {
+        logger.debug(logMessage);
+      } else {
+        logger.warn(logMessage);
+      }
       callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

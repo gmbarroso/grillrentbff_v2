@@ -409,20 +409,31 @@ export class UserService {
   }
 
   private resolveAllowedRedirectOrigins(): string[] {
-    const values = UserService.REDIRECT_ALLOWLIST_ENV_KEYS
+    const rawValues = UserService.REDIRECT_ALLOWLIST_ENV_KEYS
       .flatMap((key) => (process.env[key] || '').split(','))
       .map((value) => value.trim())
-      .filter(Boolean)
-      .map((value) => {
-        try {
-          return this.normalizeOrigin(new URL(value).origin);
-        } catch {
-          return null;
-        }
-      })
+      .filter(Boolean);
+
+    const values = rawValues
+      .map((value) => this.parseOriginValue(value))
       .filter((value): value is string => Boolean(value));
 
+    if (rawValues.length > 0 && values.length === 0) {
+      throw new BadRequestException('Invalid redirect allowlist configuration');
+    }
+
     return Array.from(new Set(values));
+  }
+
+  private parseOriginValue(value: string): string | null {
+    try {
+      return this.normalizeOrigin(new URL(value).origin);
+    } catch {
+      if (/^https?:\/\/[^/]+$/i.test(value.trim())) {
+        return this.normalizeOrigin(value);
+      }
+      return null;
+    }
   }
 
   private normalizeOrigin(value: string): string {
