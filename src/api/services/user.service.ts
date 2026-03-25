@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   ConflictException,
   HttpException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,7 +20,9 @@ import { OrganizationService } from './organization.service';
 import {
   ChangePasswordDto,
   ChangeOnboardingPasswordDto,
+  ConfirmEmailChangeDto,
   OnboardingFlagsDto,
+  RequestEmailChangeDto,
   SetOnboardingEmailDto,
   VerifyOnboardingEmailDto,
 } from '../dto/onboarding.dto';
@@ -28,6 +31,15 @@ import { CompleteFirstAccessTourDto, UserTourStateDto } from '../dto/tour.dto';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
+  private static readonly REDIRECT_ALLOWLIST_ENV_KEYS = [
+    'AUTH_REDIRECT_ALLOWED_ORIGINS',
+    'BFF_CORS_ALLOWED_ORIGINS',
+    'CORS_ALLOWED_ORIGINS',
+    'FRONTEND_URL',
+    'APP_URL',
+    'WEB_URL',
+    'PUBLIC_APP_URL',
+  ] as const;
 
   constructor(
     @InjectRepository(User)
@@ -196,7 +208,11 @@ export class UserService {
   async setOnboardingEmail(data: SetOnboardingEmailDto, token: string) {
     return this.httpService.post(
       'users/onboarding/email',
-      { ...data, email: this.normalizeEmail(data.email) },
+      {
+        ...data,
+        email: this.normalizeEmail(data.email),
+        redirectUrl: this.normalizeOptionalUrl(data.redirectUrl),
+      },
       token,
     );
   }
@@ -290,6 +306,7 @@ export class UserService {
       ...data,
       organizationSlug: this.normalizeOrganizationSlug(data.organizationSlug),
       email: this.normalizeEmail(data.email),
+      redirectUrl: this.normalizeOptionalUrl(data.redirectUrl),
     });
   }
 
@@ -299,6 +316,21 @@ export class UserService {
       organizationSlug: this.normalizeOrganizationSlug(data.organizationSlug),
       token: this.normalizeOpaqueToken(data.token),
     });
+  }
+
+  async requestEmailChange(data: RequestEmailChangeDto, token: string) {
+    return this.httpService.post('users/email/change/request', {
+      ...data,
+      email: this.normalizeEmail(data.email),
+      redirectUrl: this.normalizeOptionalUrl(data.redirectUrl),
+    }, token);
+  }
+
+  async confirmEmailChange(data: ConfirmEmailChangeDto, token: string) {
+    return this.httpService.post('users/email/change/confirm', {
+      ...data,
+      token: this.normalizeOpaqueToken(data.token),
+    }, token);
   }
 
   private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {
@@ -349,5 +381,51 @@ export class UserService {
 
   private normalizeOpaqueToken(value: string): string {
     return value.trim();
+  }
+
+  private normalizeOptionalUrl(value?: string): string | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      throw new BadRequestException('Invalid redirectUrl');
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new BadRequestException('Invalid redirectUrl');
+    }
+
+    const allowedOrigins = this.resolveAllowedRedirectOrigins();
+    if (allowedOrigins.length > 0 && !allowedOrigins.includes(this.normalizeOrigin(parsed.origin))) {
+      throw new BadRequestException('redirectUrl origin is not allowed');
+    }
+
+    return parsed.toString();
+  }
+
+  private resolveAllowedRedirectOrigins(): string[] {
+    const values = UserService.REDIRECT_ALLOWLIST_ENV_KEYS
+      .flatMap((key) => (process.env[key] || '').split(','))
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => {
+        try {
+          return this.normalizeOrigin(new URL(value).origin);
+        } catch {
+          return null;
+        }
+      })
+      .filter((value): value is string => Boolean(value));
+
+    return Array.from(new Set(values));
+  }
+
+  private normalizeOrigin(value: string): string {
+    return value.trim().replace(/\/+$/, '').toLowerCase();
   }
 }

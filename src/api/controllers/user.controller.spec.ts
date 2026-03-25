@@ -34,6 +34,8 @@ describe('UserController', () => {
             setOnboardingEmail: jest.fn(),
             verifyOnboardingEmail: jest.fn(),
             changeOnboardingPassword: jest.fn(),
+            requestEmailChange: jest.fn(),
+            confirmEmailChange: jest.fn(),
             completeFirstAccessTour: jest.fn(),
             resetFirstAccessTour: jest.fn(),
             issueRefreshedSessionToken: jest.fn(),
@@ -128,6 +130,64 @@ describe('UserController', () => {
       message: 'ok',
       onboarding: { onboardingRequired: false },
     });
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
+  });
+
+  it('proxies email change request endpoint with refreshed token and cookie', async () => {
+    service.requestEmailChange.mockResolvedValue({ message: 'verification sent', onboarding: { onboardingRequired: true } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
+    await expect(
+      controller.requestEmailChange(
+        { user: { token: 'jwt-token' } } as any,
+        { email: 'new@example.com', redirectUrl: 'https://seuze.tech/verify-email' },
+        res,
+      ),
+    ).resolves.toEqual({
+      message: 'verification sent',
+      onboarding: { onboardingRequired: true },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.requestEmailChange).toHaveBeenCalledWith(
+      { email: 'new@example.com', redirectUrl: 'https://seuze.tech/verify-email' },
+      'jwt-token',
+    );
+    expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
+  });
+
+  it('proxies email change confirm endpoint with refreshed token and cookie', async () => {
+    service.confirmEmailChange.mockResolvedValue({ message: 'email updated', onboarding: { onboardingRequired: false } } as any);
+    service.issueRefreshedSessionToken.mockReturnValue({
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+    const res = {} as any;
+    await expect(
+      controller.confirmEmailChange(
+        { user: { token: 'jwt-token' } } as any,
+        { token: 'verification-token' },
+        res,
+      ),
+    ).resolves.toEqual({
+      message: 'email updated',
+      onboarding: { onboardingRequired: false },
+      token: 'refreshed-token',
+      access_token: 'refreshed-token',
+      exp: expect.any(Number),
+    });
+    expect(service.confirmEmailChange).toHaveBeenCalledWith(
+      { token: 'verification-token' },
+      'jwt-token',
+    );
     expect(setAuthCookie).toHaveBeenCalledWith(res, 'refreshed-token', expect.any(Number));
   });
 

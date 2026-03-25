@@ -20,6 +20,10 @@ import {
   ChangePasswordSchema,
   ChangeOnboardingPasswordDto,
   ChangeOnboardingPasswordSchema,
+  ConfirmEmailChangeDto,
+  ConfirmEmailChangeSchema,
+  RequestEmailChangeDto,
+  RequestEmailChangeSchema,
   SetOnboardingEmailDto,
   SetOnboardingEmailSchema,
   VerifyOnboardingEmailDto,
@@ -199,6 +203,42 @@ export class UserController {
       res,
       token,
       async () => this.userService.setOnboardingEmail(body, token) as Promise<Record<string, unknown>>,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('email/change/request')
+  async requestEmailChange(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(RequestEmailChangeSchema)) body: RequestEmailChangeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.requestEmailChange(body, token) as Promise<Record<string, unknown>>,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('email/change/confirm')
+  async confirmEmailChange(
+    @Req() req: any,
+    @Body(new JoiValidationPipe(ConfirmEmailChangeSchema)) body: ConfirmEmailChangeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = req.user?.token;
+    if (!token) {
+      throw new UnauthorizedException('Authorization token is missing');
+    }
+    return this.respondWithRefreshedSession(
+      res,
+      token,
+      async () => this.userService.confirmEmailChange(body, token) as Promise<Record<string, unknown>>,
     );
   }
 
