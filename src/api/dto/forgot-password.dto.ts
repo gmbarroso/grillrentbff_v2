@@ -4,11 +4,13 @@ import { PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_REGEX } from '../../shared/val
 export class ForgotPasswordRequestDto {
   organizationSlug!: string;
   email!: string;
+  redirectUrl?: string;
 }
 
 export const ForgotPasswordRequestSchema = Joi.object({
   organizationSlug: Joi.string().trim().required(),
   email: Joi.string().trim().email().max(100).required(),
+  redirectUrl: Joi.string().trim().uri({ scheme: ['http', 'https'] }).max(1000).optional(),
 });
 
 export class ForgotPasswordConfirmDto {

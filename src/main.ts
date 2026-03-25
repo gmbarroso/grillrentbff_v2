@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
@@ -11,17 +11,43 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://127.0.0.1:5173',
 ];
 
-const parseAllowedOrigins = (): string[] => {
-  const rawOrigins = process.env.BFF_CORS_ALLOWED_ORIGINS || process.env.CORS_ALLOWED_ORIGINS || '';
-  const fromEnv = rawOrigins
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+const CORS_ENV_KEYS = [
+  'BFF_CORS_ALLOWED_ORIGINS',
+  'CORS_ALLOWED_ORIGINS',
+  'FRONTEND_URL',
+  'APP_URL',
+  'WEB_URL',
+  'PUBLIC_APP_URL',
+] as const;
 
-  return Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...fromEnv]));
+const normalizeOrigin = (origin: string): string => origin.trim().replace(/\/+$/, '').toLowerCase();
+
+const parseOriginValue = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    return normalizeOrigin(new URL(trimmed).origin);
+  } catch {
+    // Value may already be an origin (host:port with scheme).
+    if (/^https?:\/\/[^/]+$/i.test(trimmed)) {
+      return normalizeOrigin(trimmed);
+    }
+    return null;
+  }
+};
+
+const parseAllowedOrigins = (): string[] => {
+  const fromEnv = CORS_ENV_KEYS
+    .flatMap((key) => (process.env[key] || '').split(','))
+    .map((origin) => parseOriginValue(origin))
+    .filter((origin): origin is string => Boolean(origin));
+
+  return Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...fromEnv].map(normalizeOrigin)));
 };
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
   });
@@ -37,20 +63,35 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
         callback(null, true);
         return;
+      }
+
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      const logMessage = `Blocked CORS origin: ${origin}`;
+      if ((process.env.NODE_ENV || '').trim().toLowerCase() === 'production') {
+        logger.debug(logMessage);
+      } else {
+        logger.warn(logMessage);
       }
       callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token',
     credentials: true,
+    optionsSuccessStatus: 204,
   });
 
   app.useGlobalPipes(new ValidationPipe());
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`BFF service listening on port ${port}`);
+  logger.log(`BFF service listening on port ${port}`);
+  logger.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 }
 bootstrap();

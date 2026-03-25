@@ -3,10 +3,12 @@ import { PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_REGEX } from '../../shared/val
 
 export class SetOnboardingEmailDto {
   email!: string;
+  redirectUrl?: string;
 }
 
 export const SetOnboardingEmailSchema = Joi.object({
   email: Joi.string().trim().email().max(100).required(),
+  redirectUrl: Joi.string().trim().uri({ scheme: ['http', 'https'] }).max(1000).optional(),
 });
 
 export class VerifyOnboardingEmailDto {
@@ -53,3 +55,21 @@ export interface OnboardingFlagsDto {
   mustChangePassword: boolean;
   onboardingRequired: boolean;
 }
+
+export class RequestEmailChangeDto {
+  email!: string;
+  redirectUrl?: string;
+}
+
+export const RequestEmailChangeSchema = Joi.object({
+  email: Joi.string().trim().email().max(100).required(),
+  redirectUrl: Joi.string().trim().uri({ scheme: ['http', 'https'] }).max(1000).optional(),
+});
+
+export class ConfirmEmailChangeDto {
+  token!: string;
+}
+
+export const ConfirmEmailChangeSchema = Joi.object({
+  token: Joi.string().trim().min(20).max(512).required(),
+});

@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   ConflictException,
   HttpException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,7 +20,9 @@ import { OrganizationService } from './organization.service';
 import {
   ChangePasswordDto,
   ChangeOnboardingPasswordDto,
+  ConfirmEmailChangeDto,
   OnboardingFlagsDto,
+  RequestEmailChangeDto,
   SetOnboardingEmailDto,
   VerifyOnboardingEmailDto,
 } from '../dto/onboarding.dto';
@@ -28,6 +31,15 @@ import { CompleteFirstAccessTourDto, UserTourStateDto } from '../dto/tour.dto';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
+  private static readonly REDIRECT_ALLOWLIST_ENV_KEYS = [
+    'AUTH_REDIRECT_ALLOWED_ORIGINS',
+    'BFF_CORS_ALLOWED_ORIGINS',
+    'CORS_ALLOWED_ORIGINS',
+    'FRONTEND_URL',
+    'APP_URL',
+    'WEB_URL',
+    'PUBLIC_APP_URL',
+  ] as const;
 
   constructor(
     @InjectRepository(User)
@@ -51,7 +63,7 @@ export class UserService {
 
   async register(createUserDto: CreateUserDto) {
     this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
-    const organization = await this.resolveOrganizationBySlug(createUserDto.organizationSlug);
+    const organization = await this.resolveOrganizationBySlug(this.normalizeOrganizationSlug(createUserDto.organizationSlug));
     const normalizedEmail = createUserDto.email?.trim().toLowerCase() || null;
     const duplicateWhere: Array<{ apartment: string; block: number; organizationId: string } | { email: string; organizationId: string }> = [
       { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
@@ -89,7 +101,7 @@ export class UserService {
     this.logger.log(
       `Logging in user from apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}, organization slug: ${loginUserDto.organizationSlug}`,
     );
-    const organization = await this.resolveOrganizationBySlug(loginUserDto.organizationSlug);
+    const organization = await this.resolveOrganizationBySlug(this.normalizeOrganizationSlug(loginUserDto.organizationSlug));
     const user = await this.findUserByApartmentAndBlock(loginUserDto.apartment, loginUserDto.block, organization.id);
 
     if (!user) {
@@ -194,11 +206,23 @@ export class UserService {
   }
 
   async setOnboardingEmail(data: SetOnboardingEmailDto, token: string) {
-    return this.httpService.post('users/onboarding/email', data, token);
+    return this.httpService.post(
+      'users/onboarding/email',
+      {
+        ...data,
+        email: this.normalizeEmail(data.email),
+        redirectUrl: this.normalizeOptionalUrl(data.redirectUrl),
+      },
+      token,
+    );
   }
 
   async verifyOnboardingEmail(data: VerifyOnboardingEmailDto, token: string) {
-    return this.httpService.post('users/onboarding/verify', data, token);
+    return this.httpService.post(
+      'users/onboarding/verify',
+      { ...data, token: this.normalizeOpaqueToken(data.token) },
+      token,
+    );
   }
 
   async changeOnboardingPassword(data: ChangeOnboardingPasswordDto, token: string) {
@@ -278,11 +302,35 @@ export class UserService {
   }
 
   async requestForgotPassword(data: ForgotPasswordRequestDto) {
-    return this.httpService.post('users/forgot-password/request', data);
+    return this.httpService.post('users/forgot-password/request', {
+      ...data,
+      organizationSlug: this.normalizeOrganizationSlug(data.organizationSlug),
+      email: this.normalizeEmail(data.email),
+      redirectUrl: this.normalizeOptionalUrl(data.redirectUrl),
+    });
   }
 
   async confirmForgotPassword(data: ForgotPasswordConfirmDto) {
-    return this.httpService.post('users/forgot-password/confirm', data);
+    return this.httpService.post('users/forgot-password/confirm', {
+      ...data,
+      organizationSlug: this.normalizeOrganizationSlug(data.organizationSlug),
+      token: this.normalizeOpaqueToken(data.token),
+    });
+  }
+
+  async requestEmailChange(data: RequestEmailChangeDto, token: string) {
+    return this.httpService.post('users/email/change/request', {
+      ...data,
+      email: this.normalizeEmail(data.email),
+      redirectUrl: this.normalizeOptionalUrl(data.redirectUrl),
+    }, token);
+  }
+
+  async confirmEmailChange(data: ConfirmEmailChangeDto, token: string) {
+    return this.httpService.post('users/email/change/confirm', {
+      ...data,
+      token: this.normalizeOpaqueToken(data.token),
+    }, token);
   }
 
   private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {
@@ -321,5 +369,74 @@ export class UserService {
       mustChangePassword: false,
       onboardingRequired: false,
     };
+  }
+
+  private normalizeOrganizationSlug(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private normalizeEmail(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private normalizeOpaqueToken(value: string): string {
+    return value.trim();
+  }
+
+  private normalizeOptionalUrl(value?: string): string | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      throw new BadRequestException('Invalid redirectUrl');
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new BadRequestException('Invalid redirectUrl');
+    }
+
+    const allowedOrigins = this.resolveAllowedRedirectOrigins();
+    if (allowedOrigins.length > 0 && !allowedOrigins.includes(this.normalizeOrigin(parsed.origin))) {
+      throw new BadRequestException('redirectUrl origin is not allowed');
+    }
+
+    return parsed.toString();
+  }
+
+  private resolveAllowedRedirectOrigins(): string[] {
+    const rawValues = UserService.REDIRECT_ALLOWLIST_ENV_KEYS
+      .flatMap((key) => (process.env[key] || '').split(','))
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    const values = rawValues
+      .map((value) => this.parseOriginValue(value))
+      .filter((value): value is string => Boolean(value));
+
+    if (rawValues.length > 0 && values.length === 0) {
+      throw new BadRequestException('Invalid redirect allowlist configuration');
+    }
+
+    return Array.from(new Set(values));
+  }
+
+  private parseOriginValue(value: string): string | null {
+    try {
+      return this.normalizeOrigin(new URL(value).origin);
+    } catch {
+      if (/^https?:\/\/[^/]+$/i.test(value.trim())) {
+        return this.normalizeOrigin(value);
+      }
+      return null;
+    }
+  }
+
+  private normalizeOrigin(value: string): string {
+    return value.trim().replace(/\/+$/, '').toLowerCase();
   }
 }

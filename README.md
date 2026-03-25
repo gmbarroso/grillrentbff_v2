@@ -81,9 +81,17 @@ src/
 - **POST** `/users/register`: Register a new user.
 - **POST** `/users/login`: Log in.
 - **GET** `/users/profile`: Get user profile.
+- **POST** `/users/forgot-password/request`: Request password reset email (`organizationSlug`, `email`, optional `redirectUrl`).
+- **POST** `/users/forgot-password/confirm`: Confirm password reset (`organizationSlug`, `token`, `newPassword`).
 - **POST** `/users/onboarding/email`: Set onboarding email.
 - **POST** `/users/onboarding/verify`: Verify onboarding token.
 - **POST** `/users/onboarding/change-password`: Change temporary password.
+- **POST** `/users/email/change/request`: Request profile email change verification (`email`, optional `redirectUrl`).
+- **POST** `/users/email/change/confirm`: Confirm profile email change (`token`).
+
+### Auth Redirect URL Allowlist
+- Set `AUTH_REDIRECT_ALLOWED_ORIGINS` to a comma-separated list of allowed origins for security email links (for example, `https://seuze.tech,https://www.seuze.tech`).
+- If unset, the BFF falls back to frontend/CORS URL env vars (`BFF_CORS_ALLOWED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, `APP_URL`, `WEB_URL`, `PUBLIC_APP_URL`).
 
 ### Resources
 - **POST** `/resources`: Create a resource.
