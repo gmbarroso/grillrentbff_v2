@@ -149,4 +149,64 @@ describe('UserService - BFF-owned logout revocation', () => {
       },
     });
   });
+
+  it('normalizes forgot-password request payload before proxying', async () => {
+    httpService.post.mockResolvedValue({ message: 'ok' });
+
+    await service.requestForgotPassword({
+      organizationSlug: '  Chacara-Sacopa ',
+      email: '  Resident@Example.COM ',
+    });
+
+    expect(httpService.post).toHaveBeenCalledWith('users/forgot-password/request', {
+      organizationSlug: 'chacara-sacopa',
+      email: 'resident@example.com',
+    });
+  });
+
+  it('normalizes forgot-password confirmation payload before proxying', async () => {
+    httpService.post.mockResolvedValue({ message: 'ok' });
+
+    await service.confirmForgotPassword({
+      organizationSlug: '  Chacara-Sacopa ',
+      token: '  abc123token  ',
+      newPassword: 'SomeStrongPass#1',
+    });
+
+    expect(httpService.post).toHaveBeenCalledWith('users/forgot-password/confirm', {
+      organizationSlug: 'chacara-sacopa',
+      token: 'abc123token',
+      newPassword: 'SomeStrongPass#1',
+    });
+  });
+
+  it('normalizes onboarding email payload before proxying', async () => {
+    httpService.post.mockResolvedValue({ message: 'ok' });
+
+    await service.setOnboardingEmail(
+      {
+        email: '  Resident@Example.COM ',
+      },
+      'jwt-token',
+    );
+
+    expect(httpService.post).toHaveBeenCalledWith('users/onboarding/email', {
+      email: 'resident@example.com',
+    }, 'jwt-token');
+  });
+
+  it('normalizes onboarding verify token payload before proxying', async () => {
+    httpService.post.mockResolvedValue({ message: 'ok' });
+
+    await service.verifyOnboardingEmail(
+      {
+        token: '  verify-token  ',
+      },
+      'jwt-token',
+    );
+
+    expect(httpService.post).toHaveBeenCalledWith('users/onboarding/verify', {
+      token: 'verify-token',
+    }, 'jwt-token');
+  });
 });

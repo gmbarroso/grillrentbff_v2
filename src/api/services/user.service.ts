@@ -51,7 +51,7 @@ export class UserService {
 
   async register(createUserDto: CreateUserDto) {
     this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
-    const organization = await this.resolveOrganizationBySlug(createUserDto.organizationSlug);
+    const organization = await this.resolveOrganizationBySlug(this.normalizeOrganizationSlug(createUserDto.organizationSlug));
     const normalizedEmail = createUserDto.email?.trim().toLowerCase() || null;
     const duplicateWhere: Array<{ apartment: string; block: number; organizationId: string } | { email: string; organizationId: string }> = [
       { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
@@ -89,7 +89,7 @@ export class UserService {
     this.logger.log(
       `Logging in user from apartment: ${loginUserDto.apartment}, block: ${loginUserDto.block}, organization slug: ${loginUserDto.organizationSlug}`,
     );
-    const organization = await this.resolveOrganizationBySlug(loginUserDto.organizationSlug);
+    const organization = await this.resolveOrganizationBySlug(this.normalizeOrganizationSlug(loginUserDto.organizationSlug));
     const user = await this.findUserByApartmentAndBlock(loginUserDto.apartment, loginUserDto.block, organization.id);
 
     if (!user) {
@@ -194,11 +194,19 @@ export class UserService {
   }
 
   async setOnboardingEmail(data: SetOnboardingEmailDto, token: string) {
-    return this.httpService.post('users/onboarding/email', data, token);
+    return this.httpService.post(
+      'users/onboarding/email',
+      { ...data, email: this.normalizeEmail(data.email) },
+      token,
+    );
   }
 
   async verifyOnboardingEmail(data: VerifyOnboardingEmailDto, token: string) {
-    return this.httpService.post('users/onboarding/verify', data, token);
+    return this.httpService.post(
+      'users/onboarding/verify',
+      { ...data, token: this.normalizeOpaqueToken(data.token) },
+      token,
+    );
   }
 
   async changeOnboardingPassword(data: ChangeOnboardingPasswordDto, token: string) {
@@ -278,11 +286,19 @@ export class UserService {
   }
 
   async requestForgotPassword(data: ForgotPasswordRequestDto) {
-    return this.httpService.post('users/forgot-password/request', data);
+    return this.httpService.post('users/forgot-password/request', {
+      ...data,
+      organizationSlug: this.normalizeOrganizationSlug(data.organizationSlug),
+      email: this.normalizeEmail(data.email),
+    });
   }
 
   async confirmForgotPassword(data: ForgotPasswordConfirmDto) {
-    return this.httpService.post('users/forgot-password/confirm', data);
+    return this.httpService.post('users/forgot-password/confirm', {
+      ...data,
+      organizationSlug: this.normalizeOrganizationSlug(data.organizationSlug),
+      token: this.normalizeOpaqueToken(data.token),
+    });
   }
 
   private async resolveOrganizationBySlug(slug: string): Promise<{ id: string; slug: string; name: string }> {
@@ -321,5 +337,17 @@ export class UserService {
       mustChangePassword: false,
       onboardingRequired: false,
     };
+  }
+
+  private normalizeOrganizationSlug(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private normalizeEmail(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private normalizeOpaqueToken(value: string): string {
+    return value.trim();
   }
 }
