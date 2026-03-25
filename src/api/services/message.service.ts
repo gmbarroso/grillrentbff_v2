@@ -108,10 +108,6 @@ export class MessageService {
       fromName: this.normalizeOptionalString(body.fromName),
       fromEmail: this.normalizeOptionalEmail(body.fromEmail),
       customReplyTo: this.normalizeOptionalEmail(body.customReplyTo),
-      smtpHost: this.normalizeOptionalString(body.smtpHost),
-      smtpUser: this.normalizeOptionalString(body.smtpUser),
-      smtpFrom: this.normalizeOptionalEmail(body.smtpFrom),
-      smtpAppPassword: this.normalizeOptionalString(body.smtpAppPassword),
     };
   }
 

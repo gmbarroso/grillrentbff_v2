@@ -45,10 +45,6 @@ describe('MessageService', () => {
         fromName: '  Seu.Ze  ',
         fromEmail: '  NO-REPLY@SEUZE.TECH ',
         customReplyTo: '  FALE@SEUZE.TECH ',
-        smtpHost: '  smtp.resend.com ',
-        smtpUser: '  apikey ',
-        smtpFrom: '  no-reply@seuze.tech ',
-        smtpAppPassword: '  secret  ',
       },
       'jwt-token',
     );
@@ -60,10 +56,6 @@ describe('MessageService', () => {
       fromName: 'Seu.Ze',
       fromEmail: 'no-reply@seuze.tech',
       customReplyTo: 'fale@seuze.tech',
-      smtpHost: 'smtp.resend.com',
-      smtpUser: 'apikey',
-      smtpFrom: 'no-reply@seuze.tech',
-      smtpAppPassword: 'secret',
     }, 'jwt-token');
   });
 });
