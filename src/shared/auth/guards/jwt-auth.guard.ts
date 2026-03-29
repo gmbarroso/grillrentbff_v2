@@ -46,6 +46,7 @@ export class JwtAuthGuard implements CanActivate {
     }
   >();
   private lastOnboardingCacheCleanupAt = 0;
+  private static readonly BOT_USER_AGENT_PATTERN = /(bot|crawler|spider|headless|read-aloud|mediapartners|bingpreview|facebookexternalhit|slurp)/i;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -61,14 +62,19 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const isMutationMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((request.method || '').toUpperCase());
+    const observabilityDetails = this.getAuthFailureDetails(request);
     const headerToken = request.headers.authorization?.split(' ')[1];
     const cookieToken = getAuthTokenFromCookieHeader(request.headers.cookie);
     const token = headerToken || cookieToken;
-    const isCookieAuthenticated = !headerToken && Boolean(cookieToken);
+    const authSource = headerToken ? 'bearer' : cookieToken ? 'cookie' : 'none';
+    const isCookieAuthenticated = authSource === 'cookie';
 
     if (!token) {
       this.logger.error('Token not provided');
-      this.securityObservability.recordAuthFailure('token_not_provided', request.url);
+      this.securityObservability.recordAuthFailure('token_not_provided', request.url, {
+        ...observabilityDetails,
+        authSource,
+      });
       throw new UnauthorizedException('Token not provided');
     }
 
@@ -99,7 +105,10 @@ export class JwtAuthGuard implements CanActivate {
 
       if (!decoded || !decoded.sub || !decoded.name || !decoded.exp || !isValidRole || !isValidOrganizationId) {
         this.logger.error('Invalid token payload');
-        this.securityObservability.recordAuthFailure('invalid_token_payload', request.url);
+        this.securityObservability.recordAuthFailure('invalid_token_payload', request.url, {
+          ...observabilityDetails,
+          authSource,
+        });
         throw new UnauthorizedException('Invalid token payload');
       }
 
@@ -135,9 +144,41 @@ export class JwtAuthGuard implements CanActivate {
         throw error;
       }
       this.logger.error(`Token validation failed: ${error.message}`);
-      this.securityObservability.recordAuthFailure('invalid_or_expired_token', request.url);
+      this.securityObservability.recordAuthFailure('invalid_or_expired_token', request.url, {
+        ...observabilityDetails,
+        authSource,
+      });
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  private getAuthFailureDetails(request: {
+    headers?: Record<string, unknown>;
+  }): {
+    requestId: string;
+    origin: string;
+    userAgent: string;
+    isBotTraffic: boolean;
+  } {
+    const headers = request.headers || {};
+    const requestIdHeader = headers['x-request-id'];
+    const originHeader = headers.origin;
+    const userAgentHeader = headers['user-agent'];
+
+    const requestId =
+      (Array.isArray(requestIdHeader) ? requestIdHeader[0] : requestIdHeader)?.toString().trim()
+      || this.requestContextService.getRequestId()
+      || 'missing-request-id';
+    const origin = (Array.isArray(originHeader) ? originHeader[0] : originHeader)?.toString().trim() || 'missing-origin';
+    const userAgent =
+      (Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader)?.toString().trim() || 'missing-user-agent';
+
+    return {
+      requestId,
+      origin,
+      userAgent,
+      isBotTraffic: JwtAuthGuard.BOT_USER_AGENT_PATTERN.test(userAgent),
+    };
   }
 
   private normalizeRequestPath(url: string): string {

@@ -1,5 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+export interface AuthFailureDetails {
+  requestId?: string;
+  origin?: string;
+  userAgent?: string;
+  authSource?: 'cookie' | 'bearer' | 'none';
+  isBotTraffic?: boolean;
+}
+
 @Injectable()
 export class SecurityObservabilityService {
   private readonly logger = new Logger(SecurityObservabilityService.name);
@@ -10,9 +18,16 @@ export class SecurityObservabilityService {
     rateLimitEvents: 0,
   };
 
-  recordAuthFailure(reason: string, context: string): void {
+  recordAuthFailure(reason: string, context: string, details?: AuthFailureDetails): void {
     this.counters.authFailures += 1;
-    this.logger.warn(`event=auth_failure context=${context} reason="${reason}" count=${this.counters.authFailures}`);
+    const requestId = details?.requestId || 'missing-request-id';
+    const origin = details?.origin || 'missing-origin';
+    const userAgent = details?.userAgent || 'missing-user-agent';
+    const authSource = details?.authSource || 'none';
+    const isBotTraffic = details?.isBotTraffic ? 'true' : 'false';
+    this.logger.warn(
+      `event=auth_failure requestId=${requestId} context=${context} reason="${reason}" authSource=${authSource} isBotTraffic=${isBotTraffic} origin="${origin}" userAgent="${userAgent}" count=${this.counters.authFailures}`,
+    );
   }
 
   recordCsrfRejection(context: string): void {
