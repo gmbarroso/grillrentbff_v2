@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +30,7 @@ export class AuthService {
     const tokenPayload = {
       name: payload.name,
       sub: payload.id,
+      jti: randomUUID(),
       role: payload.role,
       organizationId: payload.organizationId,
       ...(payload.onboarding ? { onboarding: payload.onboarding } : {}),
