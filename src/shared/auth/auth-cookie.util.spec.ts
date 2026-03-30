@@ -121,7 +121,7 @@ describe('auth-cookie util', () => {
     );
   });
 
-  it('returns Secure=false when AUTH_COOKIE_SECURE=false, regardless of SameSite value', () => {
+  it('keeps Secure=true when SameSite=None even if AUTH_COOKIE_SECURE=false', () => {
     process.env.AUTH_COOKIE_SAMESITE = 'none';
     process.env.AUTH_COOKIE_SECURE = 'false';
     const res = {
@@ -135,7 +135,28 @@ describe('auth-cookie util', () => {
       'grillrent_session',
       'jwt-token',
       expect.objectContaining({
-        secure: false,
+        secure: true,
+        sameSite: 'none',
+      }),
+    );
+  });
+
+  it('defaults to SameSite=None in production-like environments when not explicitly configured', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.AUTH_COOKIE_SAMESITE = '';
+    process.env.AUTH_COOKIE_SECURE = '';
+    const res = {
+      cookie: jest.fn(),
+      clearCookie: jest.fn(),
+    };
+
+    setAuthCookie(res as any, 'jwt-token', Math.floor(Date.now() / 1000) + 3600);
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      'grillrent_session',
+      'jwt-token',
+      expect.objectContaining({
+        secure: true,
         sameSite: 'none',
       }),
     );

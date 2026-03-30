@@ -12,13 +12,14 @@ const isSecureCookieEnv = () => {
 const getCookieSameSite = (): 'lax' | 'none' => {
   const rawValue = (process.env.AUTH_COOKIE_SAMESITE || '').trim().toLowerCase();
   if (rawValue === 'none') return 'none';
-  return 'lax';
+  if (rawValue === 'lax') return 'lax';
+  return isSecureCookieEnv() ? 'none' : 'lax';
 };
 
 const resolveSecureCookie = (sameSite: 'lax' | 'none'): boolean => {
   const rawValue = (process.env.AUTH_COOKIE_SECURE || '').trim().toLowerCase();
   if (rawValue === 'true') return true;
-  if (rawValue === 'false') return false;
+  if (rawValue === 'false') return sameSite === 'none' ? true : false;
   return sameSite === 'none' || isSecureCookieEnv();
 };
 
