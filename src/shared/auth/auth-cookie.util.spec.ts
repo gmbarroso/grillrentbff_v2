@@ -120,4 +120,24 @@ describe('auth-cookie util', () => {
       }),
     );
   });
+
+  it('returns Secure=false when AUTH_COOKIE_SECURE=false, regardless of SameSite value', () => {
+    process.env.AUTH_COOKIE_SAMESITE = 'none';
+    process.env.AUTH_COOKIE_SECURE = 'false';
+    const res = {
+      cookie: jest.fn(),
+      clearCookie: jest.fn(),
+    };
+
+    setAuthCookie(res as any, 'jwt-token', Math.floor(Date.now() / 1000) + 3600);
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      'grillrent_session',
+      'jwt-token',
+      expect.objectContaining({
+        secure: false,
+        sameSite: 'none',
+      }),
+    );
+  });
 });

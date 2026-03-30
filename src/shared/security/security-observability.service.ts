@@ -18,11 +18,15 @@ export class SecurityObservabilityService {
     rateLimitEvents: 0,
   };
 
+  private sanitizeLogValue(value: string, maxLength = 200): string {
+    return value.replace(/[\r\n\t]/g, ' ').replace(/"/g, "'").slice(0, maxLength);
+  }
+
   recordAuthFailure(reason: string, context: string, details?: AuthFailureDetails): void {
     this.counters.authFailures += 1;
     const requestId = details?.requestId || 'missing-request-id';
-    const origin = details?.origin || 'missing-origin';
-    const userAgent = details?.userAgent || 'missing-user-agent';
+    const origin = this.sanitizeLogValue(details?.origin || 'missing-origin');
+    const userAgent = this.sanitizeLogValue(details?.userAgent || 'missing-user-agent');
     const authSource = details?.authSource || 'none';
     const isBotTraffic = details?.isBotTraffic ? 'true' : 'false';
     this.logger.warn(

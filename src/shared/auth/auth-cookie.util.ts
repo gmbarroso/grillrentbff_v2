@@ -2,7 +2,7 @@ import { Response } from 'express';
 
 const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'grillrent_session';
 const CSRF_COOKIE_NAME = process.env.CSRF_COOKIE_NAME || 'grillrent_csrf';
-const AUTH_COOKIE_DOMAIN = process.env.AUTH_COOKIE_DOMAIN?.trim() || undefined;
+const getCookieDomain = (): string | undefined => process.env.AUTH_COOKIE_DOMAIN?.trim() || undefined;
 
 const isSecureCookieEnv = () => {
   const env = (process.env.NODE_ENV || '').toLowerCase();
@@ -18,17 +18,18 @@ const getCookieSameSite = (): 'lax' | 'none' => {
 const resolveSecureCookie = (sameSite: 'lax' | 'none'): boolean => {
   const rawValue = (process.env.AUTH_COOKIE_SECURE || '').trim().toLowerCase();
   if (rawValue === 'true') return true;
-  if (rawValue === 'false') return sameSite === 'none';
+  if (rawValue === 'false') return false;
   return sameSite === 'none' || isSecureCookieEnv();
 };
 
 const getCookieCommonOptions = (sameSite: 'lax' | 'none') => {
   const secure = resolveSecureCookie(sameSite);
+  const domain = getCookieDomain();
   return {
     secure,
     sameSite,
     path: '/',
-    ...(AUTH_COOKIE_DOMAIN ? { domain: AUTH_COOKIE_DOMAIN } : {}),
+    ...(domain ? { domain } : {}),
   };
 };
 
