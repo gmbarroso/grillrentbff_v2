@@ -106,6 +106,7 @@ describe('Phase 5 - BFF auth regression flow', () => {
   };
   const requestContextService = {
     setOrganizationId: jest.fn(),
+    getRequestId: jest.fn(() => 'req-phase5'),
   };
 
   const createContext = (token: string) =>
