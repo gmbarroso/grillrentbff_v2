@@ -9,9 +9,13 @@ import {
 
 describe('auth-cookie util', () => {
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalCookieSameSite = process.env.AUTH_COOKIE_SAMESITE;
+  const originalCookieSecure = process.env.AUTH_COOKIE_SECURE;
 
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;
+    process.env.AUTH_COOKIE_SAMESITE = originalCookieSameSite;
+    process.env.AUTH_COOKIE_SECURE = originalCookieSecure;
   });
 
   it('extracts auth token from cookie header', () => {
@@ -88,8 +92,9 @@ describe('auth-cookie util', () => {
     );
   });
 
-  it('uses SameSite=None and Secure=true in production-like environments', () => {
-    process.env.NODE_ENV = 'production';
+  it('uses SameSite=None and Secure=true when configured for cross-site cookie transport', () => {
+    process.env.AUTH_COOKIE_SAMESITE = 'none';
+    process.env.AUTH_COOKIE_SECURE = 'true';
     const res = {
       cookie: jest.fn(),
       clearCookie: jest.fn(),
@@ -111,6 +116,26 @@ describe('auth-cookie util', () => {
       'csrf-value',
       expect.objectContaining({
         secure: true,
+        sameSite: 'none',
+      }),
+    );
+  });
+
+  it('returns Secure=false when AUTH_COOKIE_SECURE=false, regardless of SameSite value', () => {
+    process.env.AUTH_COOKIE_SAMESITE = 'none';
+    process.env.AUTH_COOKIE_SECURE = 'false';
+    const res = {
+      cookie: jest.fn(),
+      clearCookie: jest.fn(),
+    };
+
+    setAuthCookie(res as any, 'jwt-token', Math.floor(Date.now() / 1000) + 3600);
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      'grillrent_session',
+      'jwt-token',
+      expect.objectContaining({
+        secure: false,
         sameSite: 'none',
       }),
     );

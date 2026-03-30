@@ -2,6 +2,7 @@ import { Response } from 'express';
 
 const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'grillrent_session';
 const CSRF_COOKIE_NAME = process.env.CSRF_COOKIE_NAME || 'grillrent_csrf';
+const getCookieDomain = (): string | undefined => process.env.AUTH_COOKIE_DOMAIN?.trim() || undefined;
 
 const isSecureCookieEnv = () => {
   const env = (process.env.NODE_ENV || '').toLowerCase();
@@ -9,7 +10,27 @@ const isSecureCookieEnv = () => {
 };
 
 const getCookieSameSite = (): 'lax' | 'none' => {
-  return isSecureCookieEnv() ? 'none' : 'lax';
+  const rawValue = (process.env.AUTH_COOKIE_SAMESITE || '').trim().toLowerCase();
+  if (rawValue === 'none') return 'none';
+  return 'lax';
+};
+
+const resolveSecureCookie = (sameSite: 'lax' | 'none'): boolean => {
+  const rawValue = (process.env.AUTH_COOKIE_SECURE || '').trim().toLowerCase();
+  if (rawValue === 'true') return true;
+  if (rawValue === 'false') return false;
+  return sameSite === 'none' || isSecureCookieEnv();
+};
+
+const getCookieCommonOptions = (sameSite: 'lax' | 'none') => {
+  const secure = resolveSecureCookie(sameSite);
+  const domain = getCookieDomain();
+  return {
+    secure,
+    sameSite,
+    path: '/',
+    ...(domain ? { domain } : {}),
+  };
 };
 
 const parseCookieHeader = (cookieHeader?: string): Record<string, string> => {
@@ -46,9 +67,7 @@ export const setAuthCookie = (res: Response, token: string, exp?: number): void 
   const maxAge = typeof exp === 'number' ? Math.max(0, exp * 1000 - Date.now()) : 60 * 60 * 1000;
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: sameSite === 'none' || isSecureCookieEnv(),
-    sameSite,
-    path: '/',
+    ...getCookieCommonOptions(sameSite),
     maxAge,
   });
 };
@@ -57,9 +76,7 @@ export const clearAuthCookie = (res: Response): void => {
   const sameSite = getCookieSameSite();
   res.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
-    secure: sameSite === 'none' || isSecureCookieEnv(),
-    sameSite,
-    path: '/',
+    ...getCookieCommonOptions(sameSite),
   });
 };
 
@@ -67,9 +84,7 @@ export const setCsrfCookie = (res: Response, csrfToken: string): void => {
   const sameSite = getCookieSameSite();
   res.cookie(CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false,
-    secure: sameSite === 'none' || isSecureCookieEnv(),
-    sameSite,
-    path: '/',
+    ...getCookieCommonOptions(sameSite),
     maxAge: 60 * 60 * 1000,
   });
 };
@@ -78,8 +93,6 @@ export const clearCsrfCookie = (res: Response): void => {
   const sameSite = getCookieSameSite();
   res.clearCookie(CSRF_COOKIE_NAME, {
     httpOnly: false,
-    secure: sameSite === 'none' || isSecureCookieEnv(),
-    sameSite,
-    path: '/',
+    ...getCookieCommonOptions(sameSite),
   });
 };

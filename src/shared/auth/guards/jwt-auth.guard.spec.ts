@@ -36,12 +36,18 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
           url: path,
           headers: options?.useCookie
             ? {
+                'x-request-id': 'req-123',
+                origin: 'https://app.example.com',
+                'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
                 cookie: `grillrent_session=${options.token || token}; grillrent_csrf=${
                   options?.csrfCookie || 'csrf-ok'
                 }`,
                 ...(options?.csrfHeader ? { 'x-csrf-token': options.csrfHeader } : {}),
               }
             : {
+                'x-request-id': 'req-123',
+                origin: 'https://app.example.com',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
                 authorization: `Bearer ${options?.token || token}`,
                 ...(options?.csrfHeader ? { 'x-csrf-token': options.csrfHeader } : {}),
                 ...(options?.csrfCookie ? { cookie: `grillrent_csrf=${options.csrfCookie}` } : {}),
@@ -127,7 +133,16 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
       });
 
       await expect(guard.canActivate(createContext(path))).rejects.toThrow(UnauthorizedException);
-      expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith('invalid_or_expired_token', path);
+      expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith(
+        'invalid_or_expired_token',
+        path,
+        expect.objectContaining({
+          requestId: 'req-123',
+          origin: 'https://app.example.com',
+          authSource: 'bearer',
+          isBotTraffic: false,
+        }),
+      );
     },
   );
 
@@ -159,6 +174,38 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith(
       'invalid_token_payload',
       '/users/profile',
+      expect.objectContaining({
+        requestId: 'req-123',
+        authSource: 'bearer',
+      }),
+    );
+  });
+
+  it('records token_not_provided with auth source and bot tagging', async () => {
+    const botContext = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'GET',
+          url: '/users/profile',
+          headers: {
+            'x-request-id': 'req-bot-1',
+            origin: 'https://app.example.com',
+            'user-agent': 'Read-Aloud Crawler/1.0',
+          },
+        }),
+      }),
+    } as unknown as ExecutionContext;
+
+    await expect(guard.canActivate(botContext)).rejects.toThrow(UnauthorizedException);
+    expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith(
+      'token_not_provided',
+      '/users/profile',
+      expect.objectContaining({
+        requestId: 'req-bot-1',
+        origin: 'https://app.example.com',
+        authSource: 'none',
+        isBotTraffic: true,
+      }),
     );
   });
 
