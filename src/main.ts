@@ -83,7 +83,16 @@ async function bootstrap() {
       callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-Token',
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Requested-With',
+      'X-CSRF-Token',
+      'X-Organization-Slug-Hint',
+      'X-User-Apartment-Hint',
+      'X-User-Block-Hint',
+    ],
     credentials: true,
     optionsSuccessStatus: 204,
   });
