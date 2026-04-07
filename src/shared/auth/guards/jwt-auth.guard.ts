@@ -62,9 +62,9 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const isMutationMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((request.method || '').toUpperCase());
-    const observabilityDetails = this.getAuthFailureDetails(request);
     const headerToken = request.headers.authorization?.split(' ')[1];
     const cookieToken = getAuthTokenFromCookieHeader(request.headers.cookie);
+    const observabilityDetails = this.getAuthFailureDetails(request, cookieToken);
     const token = headerToken || cookieToken;
     const authSource = headerToken ? 'bearer' : cookieToken ? 'cookie' : 'none';
     const isCookieAuthenticated = authSource === 'cookie';
@@ -154,7 +154,7 @@ export class JwtAuthGuard implements CanActivate {
 
   private getAuthFailureDetails(request: {
     headers?: Record<string, unknown>;
-  }): {
+  }, cookieToken?: string | null): {
     requestId: string;
     origin: string;
     userAgent: string;
@@ -189,8 +189,7 @@ export class JwtAuthGuard implements CanActivate {
       (Array.isArray(apartmentHintHeader) ? apartmentHintHeader[0] : apartmentHintHeader)?.toString().trim() || undefined;
     const blockHint =
       (Array.isArray(blockHintHeader) ? blockHintHeader[0] : blockHintHeader)?.toString().trim() || undefined;
-    const cookieHeaderValue = (Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader)?.toString();
-    const hasSessionCookie = Boolean(getAuthTokenFromCookieHeader(cookieHeaderValue));
+    const hasSessionCookie = Boolean(cookieToken);
 
     return {
       requestId,

@@ -30,7 +30,9 @@ export class SecurityObservabilityService {
 
   recordAuthFailure(reason: string, context: string, details?: AuthFailureDetails): void {
     this.counters.authFailures += 1;
-    const requestId = details?.requestId || 'missing-request-id';
+    const requestId = this.sanitizeLogValue(details?.requestId || 'missing-request-id');
+    const sanitizedContext = this.sanitizeLogValue(context);
+    const sanitizedReason = this.sanitizeLogValue(reason);
     const origin = this.sanitizeLogValue(details?.origin || 'missing-origin');
     const userAgent = this.sanitizeLogValue(details?.userAgent || 'missing-user-agent');
     const authSource = details?.authSource || 'none';
@@ -42,7 +44,7 @@ export class SecurityObservabilityService {
     const hasAuthorizationHeader = details?.hasAuthorizationHeader ? 'true' : 'false';
     const hasSessionCookie = details?.hasSessionCookie ? 'true' : 'false';
     this.logger.warn(
-      `event=auth_failure requestId=${requestId} context=${context} reason="${reason}" authSource=${authSource} isBotTraffic=${isBotTraffic} hasAuthorizationHeader=${hasAuthorizationHeader} hasCookieHeader=${hasCookieHeader} hasSessionCookie=${hasSessionCookie} organizationSlugHint="${organizationSlugHint}" apartmentHint="${apartmentHint}" blockHint="${blockHint}" origin="${origin}" userAgent="${userAgent}" count=${this.counters.authFailures}`,
+      `event=auth_failure requestId=${requestId} context=${sanitizedContext} reason="${sanitizedReason}" authSource=${authSource} isBotTraffic=${isBotTraffic} hasAuthorizationHeader=${hasAuthorizationHeader} hasCookieHeader=${hasCookieHeader} hasSessionCookie=${hasSessionCookie} organizationSlugHint="${organizationSlugHint}" apartmentHint="${apartmentHint}" blockHint="${blockHint}" origin="${origin}" userAgent="${userAgent}" count=${this.counters.authFailures}`,
     );
   }
 

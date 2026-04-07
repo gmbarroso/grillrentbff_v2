@@ -219,6 +219,48 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
     );
   });
 
+  it('records auth failure with hasSessionCookie=true and hasCookieHeader=true for cookie-auth requests', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    jwtService.verify.mockImplementation(() => {
+      const error = new Error('jwt expired');
+      (error as Error & { name: string }).name = 'TokenExpiredError';
+      throw error;
+    });
+
+    await expect(guard.canActivate(createContext('/users/profile', { useCookie: true }))).rejects.toThrow(UnauthorizedException);
+    expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith(
+      'invalid_or_expired_token',
+      '/users/profile',
+      expect.objectContaining({
+        hasSessionCookie: true,
+        hasCookieHeader: true,
+        hasAuthorizationHeader: false,
+        authSource: 'cookie',
+      }),
+    );
+  });
+
+  it('records auth failure with hasAuthorizationHeader=true for bearer-auth requests', async () => {
+    revokedTokenRepository.findOne.mockResolvedValue(null);
+    jwtService.verify.mockImplementation(() => {
+      const error = new Error('jwt expired');
+      (error as Error & { name: string }).name = 'TokenExpiredError';
+      throw error;
+    });
+
+    await expect(guard.canActivate(createContext('/users/profile', { useCookie: false }))).rejects.toThrow(UnauthorizedException);
+    expect(securityObservability.recordAuthFailure).toHaveBeenCalledWith(
+      'invalid_or_expired_token',
+      '/users/profile',
+      expect.objectContaining({
+        hasAuthorizationHeader: true,
+        hasCookieHeader: false,
+        hasSessionCookie: false,
+        authSource: 'bearer',
+      }),
+    );
+  });
+
   it('returns service unavailable when onboarding profile lookup fails', async () => {
     revokedTokenRepository.findOne.mockResolvedValue(null);
     httpService.get.mockRejectedValue(new Error('upstream timeout'));
