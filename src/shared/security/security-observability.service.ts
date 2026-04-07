@@ -6,6 +6,12 @@ export interface AuthFailureDetails {
   userAgent?: string;
   authSource?: 'cookie' | 'bearer' | 'none';
   isBotTraffic?: boolean;
+  apartmentHint?: string;
+  blockHint?: string;
+  organizationSlugHint?: string;
+  hasCookieHeader?: boolean;
+  hasAuthorizationHeader?: boolean;
+  hasSessionCookie?: boolean;
 }
 
 @Injectable()
@@ -29,8 +35,14 @@ export class SecurityObservabilityService {
     const userAgent = this.sanitizeLogValue(details?.userAgent || 'missing-user-agent');
     const authSource = details?.authSource || 'none';
     const isBotTraffic = details?.isBotTraffic ? 'true' : 'false';
+    const apartmentHint = this.sanitizeLogValue(details?.apartmentHint || 'missing-apartment-hint');
+    const blockHint = this.sanitizeLogValue(details?.blockHint || 'missing-block-hint');
+    const organizationSlugHint = this.sanitizeLogValue(details?.organizationSlugHint || 'missing-organization-slug-hint');
+    const hasCookieHeader = details?.hasCookieHeader ? 'true' : 'false';
+    const hasAuthorizationHeader = details?.hasAuthorizationHeader ? 'true' : 'false';
+    const hasSessionCookie = details?.hasSessionCookie ? 'true' : 'false';
     this.logger.warn(
-      `event=auth_failure requestId=${requestId} context=${context} reason="${reason}" authSource=${authSource} isBotTraffic=${isBotTraffic} origin="${origin}" userAgent="${userAgent}" count=${this.counters.authFailures}`,
+      `event=auth_failure requestId=${requestId} context=${context} reason="${reason}" authSource=${authSource} isBotTraffic=${isBotTraffic} hasAuthorizationHeader=${hasAuthorizationHeader} hasCookieHeader=${hasCookieHeader} hasSessionCookie=${hasSessionCookie} organizationSlugHint="${organizationSlugHint}" apartmentHint="${apartmentHint}" blockHint="${blockHint}" origin="${origin}" userAgent="${userAgent}" count=${this.counters.authFailures}`,
     );
   }
 

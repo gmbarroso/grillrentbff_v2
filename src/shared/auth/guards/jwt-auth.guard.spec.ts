@@ -191,6 +191,10 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
             'x-request-id': 'req-bot-1',
             origin: 'https://app.example.com',
             'user-agent': 'Read-Aloud Crawler/1.0',
+            'x-organization-slug-hint': 'seuze',
+            'x-user-apartment-hint': '1201',
+            'x-user-block-hint': '2',
+            cookie: 'other_cookie=123',
           },
         }),
       }),
@@ -205,6 +209,12 @@ describe('BFF JwtAuthGuard - Phase 2 revocation enforcement', () => {
         origin: 'https://app.example.com',
         authSource: 'none',
         isBotTraffic: true,
+        organizationSlugHint: 'seuze',
+        apartmentHint: '1201',
+        blockHint: '2',
+        hasAuthorizationHeader: false,
+        hasCookieHeader: true,
+        hasSessionCookie: false,
       }),
     );
   });
