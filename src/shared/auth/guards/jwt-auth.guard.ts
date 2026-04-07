@@ -62,9 +62,9 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const isMutationMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((request.method || '').toUpperCase());
-    const observabilityDetails = this.getAuthFailureDetails(request);
     const headerToken = request.headers.authorization?.split(' ')[1];
     const cookieToken = getAuthTokenFromCookieHeader(request.headers.cookie);
+    const observabilityDetails = this.getAuthFailureDetails(request, cookieToken);
     const token = headerToken || cookieToken;
     const authSource = headerToken ? 'bearer' : cookieToken ? 'cookie' : 'none';
     const isCookieAuthenticated = authSource === 'cookie';
@@ -154,16 +154,27 @@ export class JwtAuthGuard implements CanActivate {
 
   private getAuthFailureDetails(request: {
     headers?: Record<string, unknown>;
-  }): {
+  }, cookieToken?: string | null): {
     requestId: string;
     origin: string;
     userAgent: string;
     isBotTraffic: boolean;
+    apartmentHint?: string;
+    blockHint?: string;
+    organizationSlugHint?: string;
+    hasCookieHeader: boolean;
+    hasAuthorizationHeader: boolean;
+    hasSessionCookie: boolean;
   } {
     const headers = request.headers || {};
     const requestIdHeader = headers['x-request-id'];
     const originHeader = headers.origin;
     const userAgentHeader = headers['user-agent'];
+    const organizationSlugHintHeader = headers['x-organization-slug-hint'];
+    const apartmentHintHeader = headers['x-user-apartment-hint'];
+    const blockHintHeader = headers['x-user-block-hint'];
+    const authorizationHeader = headers.authorization;
+    const cookieHeader = headers.cookie;
 
     const requestId =
       (Array.isArray(requestIdHeader) ? requestIdHeader[0] : requestIdHeader)?.toString().trim()
@@ -172,12 +183,25 @@ export class JwtAuthGuard implements CanActivate {
     const origin = (Array.isArray(originHeader) ? originHeader[0] : originHeader)?.toString().trim() || 'missing-origin';
     const userAgent =
       (Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader)?.toString().trim() || 'missing-user-agent';
+    const organizationSlugHint =
+      (Array.isArray(organizationSlugHintHeader) ? organizationSlugHintHeader[0] : organizationSlugHintHeader)?.toString().trim() || undefined;
+    const apartmentHint =
+      (Array.isArray(apartmentHintHeader) ? apartmentHintHeader[0] : apartmentHintHeader)?.toString().trim() || undefined;
+    const blockHint =
+      (Array.isArray(blockHintHeader) ? blockHintHeader[0] : blockHintHeader)?.toString().trim() || undefined;
+    const hasSessionCookie = Boolean(cookieToken);
 
     return {
       requestId,
       origin,
       userAgent,
       isBotTraffic: JwtAuthGuard.BOT_USER_AGENT_PATTERN.test(userAgent),
+      organizationSlugHint,
+      apartmentHint,
+      blockHint,
+      hasCookieHeader: Boolean((Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader)?.toString().trim()),
+      hasAuthorizationHeader: Boolean((Array.isArray(authorizationHeader) ? authorizationHeader[0] : authorizationHeader)?.toString().trim()),
+      hasSessionCookie,
     };
   }
 
