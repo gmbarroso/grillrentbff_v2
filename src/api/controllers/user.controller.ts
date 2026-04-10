@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Controller, Post, Body, Logger, Get, Put, Delete, Param, Req, UseGuards, UnauthorizedException, Res, ForbiddenException, Query } from '@nestjs/common';
 import { CreateUserDto, CreateUserSchema } from '../dto/create-user.dto';
 import { LoginUserDto, LoginUserSchema } from '../dto/login-user.dto';
 import { UpdateUserDto, UpdateUserSchema } from '../dto/update-user.dto';
@@ -92,7 +92,7 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getAllUsers(@Req() req: any) {
+  async getAllUsers(@Req() req: any, @Query() query: Record<string, unknown>) {
     this.logger.log('Entering UserController.getAllUsers');
 
     const token = req.user?.token;
@@ -103,7 +103,7 @@ export class UserController {
     }
 
     this.logger.log('Calling UserService to fetch all users');
-    return this.userService.getAllUsers(token);
+    return this.userService.getAllUsers(token, query);
   }
 
   @UseGuards(JwtAuthGuard)

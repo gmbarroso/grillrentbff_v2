@@ -229,6 +229,35 @@ describe('UserController', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('forwards users listing query params to service', async () => {
+    service.getAllUsers.mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      lastPage: 1,
+    } as any);
+
+    await expect(
+      controller.getAllUsers(
+        { user: { token: 'jwt-token' } } as any,
+        { q: 'alice', page: '2', limit: '10', sort: 'name', order: 'ASC' },
+      ),
+    ).resolves.toEqual({
+      data: [],
+      total: 0,
+      page: 1,
+      lastPage: 1,
+    });
+
+    expect(service.getAllUsers).toHaveBeenCalledWith('jwt-token', {
+      q: 'alice',
+      page: '2',
+      limit: '10',
+      sort: 'name',
+      order: 'ASC',
+    });
+  });
+
   it('proxies first-access tour completion endpoint', async () => {
     service.completeFirstAccessTour.mockResolvedValue({
       message: 'First access tour marked as completed',
