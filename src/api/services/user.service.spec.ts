@@ -20,6 +20,7 @@ describe('UserService - BFF-owned logout revocation', () => {
   };
   const httpService = {
     post: jest.fn(),
+    get: jest.fn(),
   };
 
   let service: UserService;
@@ -296,5 +297,15 @@ describe('UserService - BFF-owned logout revocation', () => {
     expect(httpService.post).toHaveBeenCalledWith('users/email/change/confirm', {
       token: 'email-change-token',
     }, 'jwt-token');
+  });
+
+  it('forwards users listing query params to API', async () => {
+    httpService.get.mockResolvedValue({ data: [], total: 0, page: 1, lastPage: 1 });
+
+    await expect(
+      service.getAllUsers('jwt-token', { q: 'alice', page: '1', limit: '10' }),
+    ).resolves.toEqual({ data: [], total: 0, page: 1, lastPage: 1 });
+
+    expect(httpService.get).toHaveBeenCalledWith('users', { q: 'alice', page: '1', limit: '10' }, 'jwt-token');
   });
 });

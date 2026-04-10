@@ -151,11 +151,11 @@ export class UserService {
     };
   }
 
-  async getAllUsers(token: string) {
+  async getAllUsers(token: string, query?: Record<string, unknown>) {
     this.logger.log('Entering UserService.getAllUsers');
 
     this.logger.log('Redirecting GET all users request to API');
-    return this.httpService.get('users', undefined, token);
+    return this.httpService.get('users', query, token);
   }
 
   async updateProfile(updateData: UpdateUserDto, token: string) {
