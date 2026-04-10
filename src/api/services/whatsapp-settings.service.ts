@@ -82,7 +82,7 @@ export class WhatsappSettingsService {
     }
   }
 
-  async disconnectOnboarding(token: string): Promise<{ ok: true }> {
+  async disconnectOnboarding(token: string): Promise<{ ok: boolean }> {
     try {
       return await this.httpService.post(`${this.apiUrl}/onboarding/disconnect`, {}, token);
     } catch (error) {

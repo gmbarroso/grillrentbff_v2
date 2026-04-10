@@ -81,4 +81,28 @@ describe('WhatsappSettingsController', () => {
     ).rejects.toThrow(ForbiddenException);
     expect(service.startOnboarding).not.toHaveBeenCalled();
   });
+
+  it('blocks onboarding status for non-admin users', async () => {
+    await expect(
+      controller.getOnboardingStatus(
+        { forceQr: true },
+        { user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+    expect(service.getOnboardingStatus).not.toHaveBeenCalled();
+  });
+
+  it('blocks onboarding refresh qr for non-admin users', async () => {
+    await expect(
+      controller.refreshOnboardingQr({ user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any),
+    ).rejects.toThrow(ForbiddenException);
+    expect(service.refreshOnboardingQr).not.toHaveBeenCalled();
+  });
+
+  it('blocks onboarding disconnect for non-admin users', async () => {
+    await expect(
+      controller.disconnectOnboarding({ user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any),
+    ).rejects.toThrow(ForbiddenException);
+    expect(service.disconnectOnboarding).not.toHaveBeenCalled();
+  });
 });
