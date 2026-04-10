@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -17,6 +18,8 @@ import { JoiValidationPipe } from '../../shared/pipes/joi-validation.pipe';
 import { UserRole } from '../entities/user.entity';
 import { WhatsappSettingsService } from '../services/whatsapp-settings.service';
 import {
+  OnboardingStatusQueryDto,
+  OnboardingStatusQuerySchema,
   TestWhatsappConnectionSchema,
   TestWhatsappConnectionDto,
   UpdateWhatsappSettingsSchema,
@@ -68,6 +71,41 @@ export class WhatsappSettingsController {
     this.logger.log('Received POST /whatsapp/settings/test-connection request');
     const token = this.ensureAdminAndGetToken(req);
     return this.whatsappSettingsService.testConnection(body, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('onboarding/start')
+  async startOnboarding(@Req() req: any) {
+    this.logger.log('Received POST /whatsapp/settings/onboarding/start request');
+    const token = this.ensureAdminAndGetToken(req);
+    return this.whatsappSettingsService.startOnboarding(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('onboarding/status')
+  async getOnboardingStatus(
+    @Query(new JoiValidationPipe(OnboardingStatusQuerySchema)) query: OnboardingStatusQueryDto,
+    @Req() req: any,
+  ) {
+    this.logger.log('Received GET /whatsapp/settings/onboarding/status request');
+    const token = this.ensureAdminAndGetToken(req);
+    return this.whatsappSettingsService.getOnboardingStatus(query, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('onboarding/refresh-qr')
+  async refreshOnboardingQr(@Req() req: any) {
+    this.logger.log('Received POST /whatsapp/settings/onboarding/refresh-qr request');
+    const token = this.ensureAdminAndGetToken(req);
+    return this.whatsappSettingsService.refreshOnboardingQr(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('onboarding/disconnect')
+  async disconnectOnboarding(@Req() req: any) {
+    this.logger.log('Received POST /whatsapp/settings/onboarding/disconnect request');
+    const token = this.ensureAdminAndGetToken(req);
+    return this.whatsappSettingsService.disconnectOnboarding(token);
   }
 
   @UseGuards(JwtAuthGuard)
