@@ -2,6 +2,7 @@ import * as Joi from '@hapi/joi';
 
 export class UpdateOrganizationDto {
   name?: string;
+  showNameInSidebar?: boolean;
   address?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -16,7 +17,8 @@ const isDataImageUrl = (value: string): boolean => /^data:image\/(?:png|jpeg|jpg
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
 
 export const UpdateOrganizationSchema = Joi.object({
-  name: Joi.string().trim().max(120).allow('').optional(),
+  name: Joi.string().trim().min(2).max(120).optional(),
+  showNameInSidebar: Joi.boolean().strict().optional(),
   address: Joi.string().max(1000).allow('', null).optional(),
   email: Joi.string().email().allow('', null).optional(),
   phone: Joi.string().max(40).allow('', null).optional(),
