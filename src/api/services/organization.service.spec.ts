@@ -51,4 +51,11 @@ describe('OrganizationService', () => {
 
     expect(httpService.put).toHaveBeenCalledWith('organizations/current', { name: 'Condominio Norte' }, 'jwt-token');
   });
+
+  it('forwards false sidebar visibility and the API response unchanged', async () => {
+    const updated = { id: 'org-1', name: 'Condominio Norte', showNameInSidebar: false };
+    httpService.put.mockResolvedValue(updated);
+    await expect(service.updateCurrent({ showNameInSidebar: false }, 'jwt-token')).resolves.toEqual(updated);
+    expect(httpService.put).toHaveBeenCalledWith('organizations/current', { showNameInSidebar: false }, 'jwt-token');
+  });
 });
