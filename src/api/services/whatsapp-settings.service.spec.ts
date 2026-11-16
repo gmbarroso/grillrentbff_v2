@@ -15,9 +15,13 @@ describe('WhatsappSettingsService', () => {
   });
 
   it('proxies start onboarding to API', async () => {
-    httpService.post.mockResolvedValue({ state: 'qr_ready' });
+    httpService.post.mockResolvedValue({ state: 'qr_ready', qr: 'BASE64_QR', ttl: 60 });
 
-    await service.startOnboarding('jwt-token');
+    await expect(service.startOnboarding('jwt-token')).resolves.toEqual({
+      state: 'qr_ready',
+      qr: 'BASE64_QR',
+      ttl: 60,
+    });
 
     expect(httpService.post).toHaveBeenCalledWith('whatsapp/settings/onboarding/start', {}, 'jwt-token');
   });
@@ -35,9 +39,13 @@ describe('WhatsappSettingsService', () => {
   });
 
   it('proxies refresh qr to API', async () => {
-    httpService.post.mockResolvedValue({ state: 'qr_ready' });
+    httpService.post.mockResolvedValue({ state: 'qr_ready', qr: 'NEW_QR', ttl: 45 });
 
-    await service.refreshOnboardingQr('jwt-token');
+    await expect(service.refreshOnboardingQr('jwt-token')).resolves.toEqual({
+      state: 'qr_ready',
+      qr: 'NEW_QR',
+      ttl: 45,
+    });
 
     expect(httpService.post).toHaveBeenCalledWith('whatsapp/settings/onboarding/refresh-qr', {}, 'jwt-token');
   });

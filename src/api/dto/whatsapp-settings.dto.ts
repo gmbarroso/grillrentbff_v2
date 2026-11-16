@@ -57,10 +57,8 @@ export type WhatsappOnboardingState =
 export interface WhatsappOnboardingStatusDto {
   state: WhatsappOnboardingState;
   status: 'connected' | 'disconnected';
-  instanceName: string;
-  qrCodeBase64: string | null;
-  ttlSeconds: number | null;
-  statusEndpoint: string;
+  qr: string | null;
+  ttl: number | null;
   maskedWhatsappNumber: string | null;
 }
 
