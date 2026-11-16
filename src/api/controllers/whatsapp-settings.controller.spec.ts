@@ -79,7 +79,11 @@ describe('WhatsappSettingsController', () => {
     await expect(
       controller.startOnboarding({ user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any),
     ).rejects.toThrow(ForbiddenException);
+    await expect(
+      controller.disconnectOnboarding({ user: { role: UserRole.RESIDENT, token: 'jwt-token' } } as any),
+    ).rejects.toThrow(ForbiddenException);
     expect(service.startOnboarding).not.toHaveBeenCalled();
+    expect(service.disconnectOnboarding).not.toHaveBeenCalled();
   });
 
   it('blocks onboarding status for non-admin users', async () => {
