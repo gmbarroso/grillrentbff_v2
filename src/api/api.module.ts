@@ -1,3 +1,5 @@
+import { PostalCodeService } from './services/postal-code.service';
+import { SelfOnboardingController } from './controllers/self-onboarding.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
@@ -34,6 +36,7 @@ import { JwtAuthGuard } from '../shared/auth/guards/jwt-auth.guard';
   ],
   controllers: [
     UserController,
+    SelfOnboardingController,
     ResourceController,
     NoticeController,
     MessageController,
@@ -42,6 +45,7 @@ import { JwtAuthGuard } from '../shared/auth/guards/jwt-auth.guard';
     WhatsappSettingsController,
   ],
   providers: [
+    PostalCodeService,
     UserService,
     AuthService,
     ResourceService,

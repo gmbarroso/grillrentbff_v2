@@ -37,10 +37,12 @@ export class UserController {
 
   constructor(private readonly userService: UserService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('register')
-  async register(@Body(new JoiValidationPipe(CreateUserSchema)) createUserDto: CreateUserDto) {
+  async register(@Body(new JoiValidationPipe(CreateUserSchema)) createUserDto: CreateUserDto, @Req() req: any) {
+    if (req.user?.role !== UserRole.ADMIN) throw new ForbiddenException('Only admins can register residents');
     this.logger.log(`Registering user: ${createUserDto.apartment}, block: ${createUserDto.block}`);
-    const result = await this.userService.register(createUserDto);
+    const result = await this.userService.register(createUserDto, req.user.token, req.user.organizationId);
     this.logger.log(`User registered successfully: ${createUserDto.apartment}, block: ${createUserDto.block}`);
     return result;
   }

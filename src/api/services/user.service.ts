@@ -5,6 +5,7 @@ import {
   ConflictException,
   HttpException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,7 +15,7 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ForgotPasswordConfirmDto, ForgotPasswordRequestDto } from '../dto/forgot-password.dto';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { RevokedToken } from '../entities/revoked-token.entity';
 import { OrganizationService } from './organization.service';
 import {
@@ -61,9 +62,13 @@ export class UserService {
     return user || undefined;
   }
 
-  async register(createUserDto: CreateUserDto) {
+  async register(createUserDto: CreateUserDto, token: string, authorizedOrganizationId: string) {
+    if (createUserDto.role === UserRole.ADMIN) throw new ForbiddenException('Use o cadastro de condomínio para criar o primeiro administrador.');
     this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
     const organization = await this.resolveOrganizationBySlug(this.normalizeOrganizationSlug(createUserDto.organizationSlug));
+    if (organization.id !== authorizedOrganizationId) throw new ForbiddenException('Organization context mismatch');
+    const subscription = await this.httpService.get<{ subscriptionStatus: string }>('onboarding/subscription', undefined, token);
+    if (['trial_expired', 'pending_verification'].includes(subscription?.subscriptionStatus)) throw new ForbiddenException({ code: 'TRIAL_UNAVAILABLE', message: 'Confirme seu cadastro ou contrate um plano antes de criar moradores.' });
     const normalizedEmail = createUserDto.email?.trim().toLowerCase() || null;
     const duplicateWhere: Array<{ apartment: string; block: number; organizationId: string } | { email: string; organizationId: string }> = [
       { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },
@@ -94,7 +99,7 @@ export class UserService {
     await this.userRepository.save(newUser);
 
     this.logger.log(`User registered successfully: ${newUser.email}`);
-    return { message: 'User registered successfully', user: newUser };
+    return { message: 'User registered successfully', user: { id: newUser.id, name: newUser.name, email: newUser.email, apartment: newUser.apartment, block: newUser.block, role: newUser.role, organizationId: newUser.organizationId } };
   }
 
   async login(loginUserDto: LoginUserDto) {

@@ -69,9 +69,10 @@ export class HttpServiceWrapper {
     }
   }
 
-  async post<T>(endpoint: string, data: any, token?: string): Promise<T> {
+  async post<T>(endpoint: string, data: any, token?: string, idempotencyKey?: string): Promise<T> {
     const url = `${this.apiUrl}/${endpoint}`;
     const headers = this.getHeaders(token);
+    if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
     try {
       const response = await this.httpService.post<T>(url, data, { headers }).toPromise();
       if (!response) {
@@ -114,8 +115,9 @@ export class HttpServiceWrapper {
   private handleHttpError(error: any): never {
     if (error.response) {
       const { status, data } = error.response;
-      this.logger.error(`API Error: ${status} - ${JSON.stringify(data)}`);
-      throw new HttpException(data.message || 'API Error', status);
+      this.logger.error(`API Error: ${status}`);
+      const safe = typeof data === 'object' && data ? { message: data.message || 'API Error', ...(typeof data.code === 'string' ? { code: data.code } : {}), ...(Array.isArray(data.fields) ? { fields: data.fields } : {}) } : { message: 'API Error' };
+      throw new HttpException(safe, status);
     } else {
       this.logger.error(`Unexpected Error: ${error.message}`);
       throw new HttpException('Unexpected Error', HttpStatus.INTERNAL_SERVER_ERROR);
