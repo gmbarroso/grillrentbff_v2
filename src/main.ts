@@ -12,6 +12,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
 ];
 
 const CORS_ENV_KEYS = [
+  'SELF_ONBOARDING_WEB_ORIGIN',
   'BFF_CORS_ALLOWED_ORIGINS',
   'CORS_ALLOWED_ORIGINS',
   'FRONTEND_URL',
@@ -85,6 +86,7 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: [
       'Content-Type',
+      'Idempotency-Key',
       'Accept',
       'Authorization',
       'X-Requested-With',

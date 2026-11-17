@@ -34,5 +34,5 @@ export const CreateUserSchema = Joi.object({
     }),
   apartment: Joi.string().required(),
   block: Joi.number().valid(1, 2).required(),
-  role: Joi.string().valid(UserRole.ADMIN, UserRole.RESIDENT).default(UserRole.RESIDENT),
+  role: Joi.string().valid(UserRole.RESIDENT).default(UserRole.RESIDENT),
 });

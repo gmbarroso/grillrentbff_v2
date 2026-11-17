@@ -12,6 +12,7 @@ export class EdgeRateLimitMiddleware implements NestMiddleware {
   }
 
   private readonly globalBuckets = new Map<string, Bucket>();
+  private readonly onboardingBuckets = new Map<string, Bucket>();
   private readonly loginBuckets = new Map<string, Bucket>();
   private readonly globalWindowMs = EdgeRateLimitMiddleware.parseRateLimitNumber(
     process.env.EDGE_RATE_LIMIT_WINDOW_MS,
@@ -40,6 +41,15 @@ export class EdgeRateLimitMiddleware implements NestMiddleware {
       this.securityObservability.recordRateLimitEvent('global', ip);
       this.reject(res, 'global');
       return;
+    }
+
+    if (method === 'POST' && /^\/onboarding\/(organizations|verify-email|resend-verification)$/.test(path)) {
+      if (!this.consume(this.onboardingBuckets, `${ip}:onboarding`, 900_000, 15)) {
+        this.securityObservability.recordRateLimitEvent('onboarding', ip);
+        res.setHeader('Retry-After', 900);
+        res.status(429).json({ code: 'RATE_LIMITED', message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' });
+        return;
+      }
     }
 
     if (method === 'POST' && path === '/users/login') {
