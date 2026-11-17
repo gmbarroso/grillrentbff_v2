@@ -15,3 +15,7 @@ Solicitar contratação grava a preferência; não cria checkout, não cobra e n
 Validação: npm run build; npm test -- --runInBand; conferência ponta a ponta com frontend, BFF, API e PostgreSQL isolados.
 
 Endereço: GET /onboarding/postal-code/:postalCode é público, valida oito dígitos e consulta exclusivamente https://viacep.com.br. Resposta normalizada: postalCode, street, neighborhood, city e stateCode. Há timeout de cinco segundos e cache limitado por cinco minutos. O formulário envia esses campos e addressNumber separadamente; a interface consulta automaticamente após 400 ms sem digitação com CEP completo e mantém rua, bairro, cidade e UF somente para leitura. Em caso de falha, solicita conferir e digitar o CEP novamente.
+
+## Próxima entrega: pagamentos de assinaturas
+
+O [plano central de pagamentos](../../grillrentapi/docs/PAYMENTS_PLAN.md) registra a decisão de concluir primeiro as assinaturas do Seu.Zé e adiar pagamentos de reservas. Provedor definido: Stripe com assinatura por cartão, sem Pix nesta entrega. Inclui regras comerciais, migrations, checkout, webhooks, renovação, cancelamento, conciliação e critérios de lançamento. É planejamento; não altera o comportamento atual descrito acima.
