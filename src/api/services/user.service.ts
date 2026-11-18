@@ -67,8 +67,8 @@ export class UserService {
     this.logger.log(`Registering user: ${createUserDto.email}, organization slug: ${createUserDto.organizationSlug}`);
     const organization = await this.resolveOrganizationBySlug(this.normalizeOrganizationSlug(createUserDto.organizationSlug));
     if (organization.id !== authorizedOrganizationId) throw new ForbiddenException('Organization context mismatch');
-    const subscription = await this.httpService.get<{ subscriptionStatus: string }>('onboarding/subscription', undefined, token);
-    if (['trial_expired', 'pending_verification'].includes(subscription?.subscriptionStatus)) throw new ForbiddenException({ code: 'TRIAL_UNAVAILABLE', message: 'Confirme seu cadastro ou contrate um plano antes de criar moradores.' });
+    const subscription = await this.httpService.get<{ subscriptionStatus: string; canWrite?: boolean }>('onboarding/subscription', undefined, token);
+    if (['trial_expired', 'pending_verification', 'suspended'].includes(subscription?.subscriptionStatus) || subscription?.canWrite === false) throw new ForbiddenException({ code: 'TRIAL_UNAVAILABLE', message: 'Confirme seu cadastro ou regularize sua assinatura antes de criar moradores.' });
     const normalizedEmail = createUserDto.email?.trim().toLowerCase() || null;
     const duplicateWhere: Array<{ apartment: string; block: number; organizationId: string } | { email: string; organizationId: string }> = [
       { apartment: createUserDto.apartment, block: createUserDto.block, organizationId: organization.id },

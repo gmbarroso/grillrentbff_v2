@@ -49,6 +49,19 @@ describe('resident registration tenant and trial boundaries', () => {
     );
     expect(userRepository.save).not.toHaveBeenCalled();
   });
+  it.each([
+    { subscriptionStatus: 'suspended', canWrite: false },
+    { subscriptionStatus: 'past_due', canWrite: false },
+  ])(
+    'blocks resident creation when paid access is unavailable: %j',
+    async (subscription) => {
+      http.get.mockResolvedValue(subscription);
+      await expect(service.register(body, 'jwt', 'org-1')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(userRepository.save).not.toHaveBeenCalled();
+    },
+  );
   it('preserves resident creation for legacy condos and never returns the password hash', async () => {
     http.get.mockResolvedValue({ subscriptionStatus: 'legacy' });
     userRepository.findOne.mockResolvedValue(null);

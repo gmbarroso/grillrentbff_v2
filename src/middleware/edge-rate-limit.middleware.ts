@@ -43,6 +43,14 @@ export class EdgeRateLimitMiddleware implements NestMiddleware {
       return;
     }
 
+    if (method === 'POST' && path.startsWith('/billing/')) {
+      if (!this.consume(this.onboardingBuckets, `${ip}:billing`, 60_000, 20)) {
+        res.setHeader('Retry-After', 60);
+        res.status(429).json({ code: 'RATE_LIMITED', message: 'Muitas tentativas de pagamento. Aguarde um minuto.' });
+        return;
+      }
+    }
+
     if (method === 'POST' && /^\/onboarding\/(organizations|verify-email|resend-verification)$/.test(path)) {
       if (!this.consume(this.onboardingBuckets, `${ip}:onboarding`, 900_000, 15)) {
         this.securityObservability.recordRateLimitEvent('onboarding', ip);
