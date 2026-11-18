@@ -1,3 +1,4 @@
+import { BillingController } from './controllers/billing.controller';
 import { PostalCodeService } from './services/postal-code.service';
 import { SelfOnboardingController } from './controllers/self-onboarding.controller';
 import { Module } from '@nestjs/common';
@@ -37,6 +38,7 @@ import { JwtAuthGuard } from '../shared/auth/guards/jwt-auth.guard';
   controllers: [
     UserController,
     SelfOnboardingController,
+    BillingController,
     ResourceController,
     NoticeController,
     MessageController,

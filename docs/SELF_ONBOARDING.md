@@ -10,7 +10,7 @@ Mudança do registro legado: POST /users/register agora exige administrador aute
 
 Publicar somente após a migration e a API correspondentes. A API mantém novos cadastros desligados até SELF_ONBOARDING_ENABLED=true. O processo completo de migração, e-mail e rollback está documentado em grillrentapi/docs/SELF_ONBOARDING.md.
 
-Solicitar contratação grava a preferência; não cria checkout, não cobra e não ativa plano pago. O fluxo Stripe permanece separado.
+Solicitar contratação grava a preferência; não cria checkout, não cobra e não ativa plano pago. Os novos endpoints de Stripe estão separados sob `/billing`; ver [STRIPE_BILLING.md](../../grillrentapi/docs/STRIPE_BILLING.md).
 
 Validação: npm run build; npm test -- --runInBand; conferência ponta a ponta com frontend, BFF, API e PostgreSQL isolados.
 
@@ -18,4 +18,10 @@ Endereço: GET /onboarding/postal-code/:postalCode é público, valida oito díg
 
 ## Próxima entrega: pagamentos de assinaturas
 
-O [plano central de pagamentos](../../grillrentapi/docs/PAYMENTS_PLAN.md) registra a decisão de concluir primeiro as assinaturas do Seu.Zé e adiar pagamentos de reservas. Provedor definido: Stripe com assinatura por cartão, sem Pix nesta entrega. Inclui regras comerciais, migrations, checkout, webhooks, renovação, cancelamento, conciliação e critérios de lançamento. É planejamento; não altera o comportamento atual descrito acima.
+O [plano central de pagamentos](../../grillrentapi/docs/PAYMENTS_PLAN.md) registra a decisão de concluir primeiro as assinaturas do Seu.Zé e adiar pagamentos de reservas. Provedor definido: Stripe com assinatura por cartão, sem Pix nesta entrega. Inclui regras comerciais, migrations, checkout, webhooks, renovação, cancelamento, conciliação e critérios de lançamento. Os endpoints de billing já estão implementados localmente; sandbox da conta e ativação comercial ainda estão pendentes.
+
+## Assinaturas Stripe
+
+O BFF publica GET /billing/subscription e POST /billing/checkout, /billing/checkout/expire, /billing/sync e /billing/manage. Todas as rotas exigem administrador; mutações usam a proteção JWT/CSRF existente, checkout encaminha Idempotency-Key e há rate limit próprio. A organização é resolvida pela sessão. Nenhuma chave Stripe é configurada no BFF.
+
+O webhook Stripe recebe o corpo bruto diretamente na API, sem passar pelo BFF. API e banco devem receber a migration de billing antes da publicação. Cadastro de moradores também bloqueia assinatura suspensa ou canWrite=false, preservando o cadastro em organizações legadas.
