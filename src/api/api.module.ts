@@ -1,3 +1,4 @@
+import { ReservationPaymentsController, LegalDocumentsController } from './controllers/reservation-payments.controller';
 import { BillingController } from './controllers/billing.controller';
 import { PostalCodeService } from './services/postal-code.service';
 import { SelfOnboardingController } from './controllers/self-onboarding.controller';
@@ -36,6 +37,7 @@ import { JwtAuthGuard } from '../shared/auth/guards/jwt-auth.guard';
     }),
   ],
   controllers: [
+    ReservationPaymentsController, LegalDocumentsController,
     UserController,
     SelfOnboardingController,
     BillingController,
