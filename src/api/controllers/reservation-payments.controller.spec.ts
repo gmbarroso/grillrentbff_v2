@@ -29,4 +29,9 @@ describe('reservation payment BFF', () => {
     expect(() => controller.reserve(admin, {}, 'bad')).toThrow('inválida');
     expect(http.post).not.toHaveBeenCalled();
   });
+  it('preserves the personal-history filter for an administrator browsing their own reservations', () => {
+    controller.list(admin, 'true');
+    expect(http.get).toHaveBeenCalledWith('reservation-payments/reservations', { mine: 'true' }, 'admin-token');
+  });
+
 });

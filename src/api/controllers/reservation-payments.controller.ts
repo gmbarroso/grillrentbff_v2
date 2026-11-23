@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Post,
   Req,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
@@ -39,10 +40,10 @@ export class ReservationPaymentsController {
       this.token(req),
     );
   }
-  @Get('reservations') list(@Req() req: any) {
+  @Get('reservations') list(@Req() req: any, @Query('mine') mine?: string) {
     return this.http.get(
       'reservation-payments/reservations',
-      undefined,
+      mine === 'true' ? { mine: 'true' } : undefined,
       this.token(req),
     );
   }
