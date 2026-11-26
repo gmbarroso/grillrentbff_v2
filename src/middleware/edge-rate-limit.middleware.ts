@@ -43,7 +43,7 @@ export class EdgeRateLimitMiddleware implements NestMiddleware {
       return;
     }
 
-    if (method === 'POST' && path.startsWith('/billing/')) {
+    if (method === 'POST' && (path.startsWith('/billing/') || path.startsWith('/reservation-payments/'))) {
       if (!this.consume(this.onboardingBuckets, `${ip}:billing`, 60_000, 20)) {
         res.setHeader('Retry-After', 60);
         res.status(429).json({ code: 'RATE_LIMITED', message: 'Muitas tentativas de pagamento. Aguarde um minuto.' });

@@ -5,6 +5,7 @@ import { normalizeSlug } from '../../shared/slug/normalize-slug.util';
 type BillingCycle = 'monthly' | 'annual';
 
 export interface CreateOnboardingDto {
+  legalAcceptance?: { accepted: boolean; version: string; sha256: string };
   organization: {
     name: string;
     slug: string;
@@ -31,6 +32,7 @@ const slug = Joi.string()
   )
   .required();
 export const CreateOnboardingSchema = Joi.object({
+  legalAcceptance: Joi.object({ accepted: Joi.boolean().valid(true).required(), version: Joi.string().max(80).required(), sha256: Joi.string().hex().length(64).required() }).optional(),
   organization: Joi.object({
     name: Joi.string().trim().min(2).max(120).required(),
     slug,
@@ -91,6 +93,7 @@ export const CreateOnboardingSchema = Joi.object({
   pricingVersion: Joi.string().max(40).required(),
 });
 export const PurchaseRequestSchema = Joi.object({
+  legalAcceptance: Joi.object({ accepted: Joi.boolean().valid(true).required(), version: Joi.string().max(80).required(), sha256: Joi.string().hex().length(64).required() }).optional(),
   planId: Joi.string().max(80).required(),
   billingCycle: Joi.string().valid('monthly', 'annual').required(),
   pricingVersion: Joi.string().max(40).required(),

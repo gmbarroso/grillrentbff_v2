@@ -49,4 +49,10 @@ describe('BFF BookingService', () => {
     expect(result).toEqual(payload);
     expect(httpService.post).toHaveBeenCalledWith('bookings/batch', body, 'jwt-token');
   });
+  it('forwards the selected resource ID when querying its calendar', async () => {
+    httpService.get.mockResolvedValue({ reservedTimes: [] });
+    await service.getReservedTimes('hourly', '2026-11-24', 'jwt-token', 'court-2');
+    expect(httpService.get).toHaveBeenCalledWith('bookings/reserved-times', { resourceType: 'hourly', date: '2026-11-24', resourceId: 'court-2' }, 'jwt-token');
+  });
+
 });

@@ -113,6 +113,7 @@ export class BookingController {
     @Query('resourceType') resourceType: string,
     @Query('date') date: string,
     @Req() req: any,
+    @Query('resourceId') resourceId?: string,
   ) {
     this.logger.log('Received GET /bookings/reserved-times request');
     const token = req.user?.token;
@@ -123,6 +124,6 @@ export class BookingController {
     }
 
     this.logger.log(`Fetching reserved times for resourceType: ${resourceType} on date: ${date}`);
-    return this.bookingService.getReservedTimes(resourceType, date, token);
+    return this.bookingService.getReservedTimes(resourceType, date, token, resourceId);
   }
 }

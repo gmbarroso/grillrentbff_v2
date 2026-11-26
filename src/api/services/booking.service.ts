@@ -64,8 +64,8 @@ export class BookingService {
     }
   }
 
-  async getReservedTimes(resourceType: string, date: string, token: string) {
-    const query = { resourceType, date };
+  async getReservedTimes(resourceType: string, date: string, token: string, resourceId?: string) {
+    const query = { resourceType, date, ...(resourceId ? { resourceId } : {}) };
     try {
       return await this.httpService.get(`${this.apiUrl}/reserved-times`, query, token);
     } catch (error) {
